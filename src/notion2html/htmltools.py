@@ -959,31 +959,40 @@ def _last_edited_time(property_name, property_value, soup):
     soup.append(p_tag)
 
 
-# TODO: Do something better for this property type.
-def _formula(property_name, _, soup):
+def _formula(property_name, property_value, soup):
+
+    formula_type = property_value.get('formula', {}).get('type', '')
+    formula_result = property_value.get('formula', {}).get(formula_type, '')
+
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append("((Complex property type. Unsupported. Not migrated.))")
+    p_tag.append(str(formula_result))
     soup.append(p_tag)
 
 
-# TODO: Do something better for this property type.
-def _relation(property_name, _, soup):
+def _relation(property_name, property_value, soup):
+
+    relation_values = property_value.get('relation', [])
+    ids = [x.get('id', '') for x in relation_values]
+
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append("((Complex property type. Unsupported. Not migrated.))")
+    p_tag.append(str(ids).lstrip('[').rstrip(']').replace('\'', '').replace(' ', ''))
     soup.append(p_tag)
 
 
-# TODO: Do something better for this property type.
+# Need to do something better for Rollup property type.
+# As of 2023-09-12 the API documentation for this type is here, but I think
+# the example is wrong? The type of the example is relation, not rollup.
+# https://developers.notion.com/reference/page-property-values#rollup
 def _rollup(property_name, _, soup):
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append("((Complex property type. Unsupported. Not migrated.))")
+    p_tag.append("Rollup property types not yet supported.")
     soup.append(p_tag)
