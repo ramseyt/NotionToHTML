@@ -28,44 +28,6 @@ logger = logging.getLogger('notion2html')
 logger.setLevel(logging.WARNING)
 
 
-def write_notionpage_object_to_file(notion_page):
-
-    filename = notion_page.id + ".pickle"
-    full_directory_path = pathlib.Path.joinpath(get_path_to_run_directory(), "notion_pages")
-    full_directory_path.mkdir(exist_ok=True, parents=True)
-
-    full_path = full_directory_path.joinpath(filename)
-    _write_object(notion_page, full_path)
-
-
-def _write_object(obj, full_path_to_file):
-    """Pickles the provided object to the filesystem.
-    object is any arbitrary object to save. Label is an identifier string and should
-    be used with read_object as well.
-
-    The first time an object with a given label is passed in a new file will be created
-    and stored on disk. Subsequent writes will COMPLETELY OVERWRITE the object saved on
-    disk with the one passed in.
-    """
-
-    # Opening with 'w' overwrites data in the file.
-    with open(full_path_to_file, 'wb') as f:
-        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
-
-
-def _read_object(pickle_filename):
-    """Reads the pickeled object previously saved with label and returns it.
-    pickle_filename the full path to the file to read.
-    """
-
-    try:
-        with open(pickle_filename, 'rb') as f:
-            return pickle.load(f)
-    except FileNotFoundError:
-        logger.debug(f"File not found trying to unpickle this file: {pickle_filename}")
-        raise
-
-
 def extract_filename_from_url(url):
     # Parse the URL into its components
     url_path = urlparse(url).path
