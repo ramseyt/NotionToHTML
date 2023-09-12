@@ -65,6 +65,7 @@ class NotionDatabase:
 
         # List of title blocks that make up the database title.
         self.title_blocks = title_blocks
+        self.title = htmltools.convert_rich_text_to_string(title_blocks)
 
         # List of NotionPage objects that are top-level database items.
         self.top_level_pages = []
@@ -395,7 +396,7 @@ def handle_page_special_cases(notion_page):
             full_file_path = networking.download_file_and_save(url, filename)
 
             # Get placeholder text and save attachment info on the file object
-            placeholder_text =  htmltools.attachment_text()
+            placeholder_text =  htmltools.attachment_link_text()
 
             attachment = Attachment(url, block_type, placeholder_text, full_file_path)
             notion_page.add_attachment(attachment)
