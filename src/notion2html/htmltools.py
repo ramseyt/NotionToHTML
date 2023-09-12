@@ -26,11 +26,15 @@ logger.setLevel(logging.WARNING)
 ########################### Formatting
 
 def page_link_text(title):
-    return f"~~~Link: {title}~~~"
+    return f"~~~Link:{title}~~~"
 
 
-def attachment_text():
+def attachment_link_text():
     return f"~~~Attachment:{secrets.token_urlsafe(16)}~~~"
+
+
+def database_placeholder_text(database_id):
+    return f"~~~Database:{database_id}~~~"
 
 
 def block_types_with_attachments():
@@ -133,7 +137,7 @@ def flatten_blocks_into_html(notion_page, blocks, soup):
         if block_type in block_types_with_attachments():
             handler(block, soup, notion_page)
 
-        elif block_type in ["bulleted_list_item", "numbered_list_item", "to_do", "child_database"]:
+        elif block_type in ["bulleted_list_item", "numbered_list_item", "to_do"]:
             handler(block, soup, notion_page)
 
         elif block_type in ["table", "synced_block"]:
@@ -622,21 +626,17 @@ def _synced_block(block, soup, notion_page):
     flatten_blocks_into_html(notion_page, synced_blocks, soup)
 
 
-def _child_database(block, soup, notion_page):
+def _child_database(block, soup):
 
     # Create a new paragraph tag
     para_tag = soup.new_tag("p")
 
     # Get database name
     database_id = block.get('id', '')
-    database = notion_page.get_database_for_id(database_id)
-    database_title_blocks = database.title_blocks
 
     # Append database name
-    text = soup.new_string("Inline database was here:  ")
+    text = soup.new_string(database_placeholder_text(database_id))
     para_tag.append(text)
-    for text in database_title_blocks:
-        para_tag.append(_handle_formatting(text, soup))
 
     # Append the paragraph tag to the soup object
     soup.append(para_tag)
