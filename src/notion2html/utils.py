@@ -1,5 +1,6 @@
 """ Utility functions.
 """
+# pylint: disable=import-error
 
 # Standard library imports
 import logging
@@ -7,7 +8,7 @@ import logging
 # External module imports
 
 # Local imports
-from notion2html import htmltools
+from . import htmltools
 
 
 __author__ = "Ramsey Tantawi"
@@ -16,7 +17,8 @@ __email__ = "ramsey@tantawi.com"
 __status__ = "Production"
 
 
-logger = logging.getLogger('notion2notes')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 def find_page_id(page):

@@ -1,9 +1,9 @@
 """ All networking related code.
 """
+# pylint: disable=import-error
 
 # Standard library imports
 import logging
-import os
 import threading
 import time
 
@@ -11,7 +11,7 @@ import time
 import requests
 
 # Local imports
-from notion2html import files
+from . import files
 
 __author__ = "Ramsey Tantawi"
 __maintainer__ = "Ramsey Tantawi"
@@ -20,10 +20,13 @@ __status__ = "Experimental"
 
 
 NOTION_VERSION = "2022-06-28"
-NOTION_TOKEN = ""
 NOTION_API_BASE_URL = "https://api.notion.com/v1"
+NOTION_TOKEN = ""
 FETCHED_PAGES = None
-logger = logging.getLogger('notion2notes')
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 class Error404NotFound(Exception):
@@ -79,10 +82,22 @@ def get_fetched_page_for_id(page_id):
     return FETCHED_PAGES.get_page_for_id(page_id)
 
 
-def clear_fetched_pageids():
+def clear_fetched_pages():
     global FETCHED_PAGES
     if FETCHED_PAGES:
         FETCHED_PAGES = None
+
+
+def set_notion_token(token):
+    """Set the Notion token."""
+    global NOTION_TOKEN
+    NOTION_TOKEN = token
+
+
+def clear_notion_token():
+    """Set the Notion token to None."""
+    global NOTION_TOKEN
+    NOTION_TOKEN = None
 
 
 def download_file_and_save(url, file_name):
@@ -234,9 +249,9 @@ def get_network_data(url, method, file_download=False, payload=None):
 
 def _get_headers(file_download=False):
 
-    global NOTION_TOKEN
     if not NOTION_TOKEN:
-        NOTION_TOKEN = os.environ.get("NOTION_TOKEN")
+        raise RuntimeError("Notion access token not provided. Can't make network requests. Please "
+                           "provide a token.")
 
     if file_download is False:
         headers = {

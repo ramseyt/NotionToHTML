@@ -1,5 +1,6 @@
 """ Code for interacting with Notion.
 """
+# pylint: disable=import-error
 
 # Standard library imports
 import concurrent.futures
@@ -9,10 +10,10 @@ import traceback
 # External module imports
 
 # Local imports
-from notion2html import files
-from notion2html import htmltools
-from notion2html import networking
-from notion2html import utils
+from . import files
+from . import htmltools
+from . import networking
+from . import utils
 
 
 __author__ = "Ramsey Tantawi"
@@ -21,7 +22,8 @@ __email__ = "ramsey@tantawi.com"
 __status__ = "Experimental"
 
 
-logger = logging.getLogger('notion2notes')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 class NotionResult:
@@ -35,6 +37,7 @@ class NotionResult:
         self.all_pages = {}
         self.all_databases = {}
         self.errors = {}
+        self.file_path = ''
 
 
     def add_top_level_page(self, page):
@@ -162,11 +165,6 @@ class NotionPage:
         self.attachments[attachment.url] = attachment
 
 
-    def add_attachments(self, attachments):
-        for attachment in attachments:
-            self.attachments[attachment.url] = attachment
-
-
     def add_tableid_and_rows(self, table_id, table_rows):
         self.tables_and_rows[table_id] = table_rows
 
@@ -191,15 +189,38 @@ class Attachment:
         self.path = full_path_to_file
 
 
+def startup(token, file_path):
+    """Setup code for a single run."""
+
+    networking.set_notion_token(token)
+    if file_path:
+        files.set_path_to_run_directory(file_path)
+    else:
+        files.set_path_to_run_directory()
+
+
+def teardown():
+    """Cleanup code to run after a single run is complete."""
+
+    # Once done fetching pages, clear the list of fetched page IDs so it's
+    # not carried forward if we run this function again before the calling
+    # code exits.
+    networking.clear_fetched_pages()
+    networking.clear_notion_token()
+    files.clear_path_to_run_directory()
+    files.clear_run_id()
+
+
 ########################### Transform data from Notion
 #
 # These functions call into the fetch Notion functions below to get
 # data from Notion, and then transforms and formats it.
 #
 
-def get_from_notion(notion_id):
+def get_from_notion(notion_id, notion_token, file_path=None):
 
-    logger.debug(f"Notion data get started with Notion id: {notion_id}")
+    logger.debug(f"Notion id passed in: {notion_id}")
+    startup(notion_token, file_path)
 
     page = None
     database = None
@@ -215,20 +236,18 @@ def get_from_notion(notion_id):
     except networking.Error404NotFound:
         logger.debug(f"Database not found in Notion: {notion_id}")
 
-    # Once done fetching pages, clear the list of fetched page IDs so it's
-    # not carried forward if we run this function again before the calling
-    # code exits.
-    networking.clear_fetched_pageids()
+    teardown()
 
     if page:
         result.add_top_level_page(page)
         return result
 
-    if database:
+    elif database:
         result.add_database(database)
         return result
 
-    return result
+    else:
+        return result
 
 
 def get_page_with_id(page_id):

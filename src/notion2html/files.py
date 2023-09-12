@@ -22,7 +22,10 @@ __status__ = "Experimental"
 
 RUN_ID = None
 RUN_DIRECTORY_FULL_PATH = None
-logger = logging.getLogger('notion2notes')
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 def write_notionpage_object_to_file(notion_page):
@@ -105,17 +108,44 @@ def get_path_to_run_directory():
     /Users/<username>/.notion2html/<run_id>/
     """
 
-    global RUN_DIRECTORY_FULL_PATH
     if RUN_DIRECTORY_FULL_PATH:
         return RUN_DIRECTORY_FULL_PATH
 
-    full_directory_path = pathlib.Path.joinpath(pathlib.Path.home(), \
-                                                ".notion2html", \
+    raise RuntimeError("Run directory not defined.")
+
+
+def set_path_to_run_directory(custom_path=None):
+    """Sets the path to the run directory. This is useful for testing."""
+
+    global RUN_DIRECTORY_FULL_PATH
+
+    if custom_path is None:
+        root_path = pathlib.Path.home()
+    else:
+        root_path = pathlib.Path(custom_path)
+
+
+    full_directory_path = pathlib.Path.joinpath(root_path, \
+                                                "logs-notion2html", \
                                                 _get_directory_name_for_run())
     full_directory_path.mkdir(exist_ok=True, parents=True)
 
     RUN_DIRECTORY_FULL_PATH = full_directory_path
     return RUN_DIRECTORY_FULL_PATH
+
+
+def clear_path_to_run_directory():
+    """Set path to run directory to None."""
+
+    global RUN_DIRECTORY_FULL_PATH
+    RUN_DIRECTORY_FULL_PATH = None
+
+
+def clear_run_id():
+    """Clear run ID."""
+
+    global RUN_ID
+    RUN_ID = None
 
 
 def _get_directory_name_for_run() -> str:
