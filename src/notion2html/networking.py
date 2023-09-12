@@ -25,7 +25,7 @@ NOTION_TOKEN = ""
 FETCHED_PAGES = None
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('notion2html')
 logger.setLevel(logging.WARNING)
 
 

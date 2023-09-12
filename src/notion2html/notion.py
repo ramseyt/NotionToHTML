@@ -22,8 +22,9 @@ __email__ = "ramsey@tantawi.com"
 __status__ = "Experimental"
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('notion2html')
 logger.setLevel(logging.WARNING)
+logger.propagate = True
 
 
 class NotionResult:
@@ -346,7 +347,8 @@ def get_page(page, parent_page=None):
     # and so on for the entire tree of pages at any depth.
     subpages = get_subpages_of_page(notion_page)
     for subpage in subpages:
-        notion_page.add_subpage(subpage)
+        if subpage:
+            notion_page.add_subpage(subpage)
 
     logger.debug((f"Fetch complete (including any subpages) for this Notion page: \n"
                   f"Title: {title}\n"

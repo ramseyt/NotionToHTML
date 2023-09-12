@@ -19,7 +19,7 @@ __email__ = "ramsey@tantawi.com"
 __status__ = "Experimental"
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('notion2html')
 logger.setLevel(logging.WARNING)
 
 

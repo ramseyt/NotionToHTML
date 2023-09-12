@@ -24,7 +24,7 @@ RUN_ID = None
 RUN_DIRECTORY_FULL_PATH = None
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('notion2html')
 logger.setLevel(logging.WARNING)
 
 
@@ -79,13 +79,6 @@ def extract_filename_from_url(url):
     return filename
 
 
-def get_logfile_path():
-    """Returns a pathlib.Path object."""
-
-    logfile_path = pathlib.Path.joinpath(get_path_to_run_directory(), "notion2notes.log")
-    return logfile_path
-
-
 def get_attachment_path():
     """Returns a path that's:
 
@@ -104,8 +97,7 @@ def get_attachment_path():
 
 
 def get_path_to_run_directory():
-    """Returns a pathlib.Path object that represents the path:
-    /Users/<username>/.notion2html/<run_id>/
+    """Returns a pathlib.Path object of the run directory full path.
     """
 
     if RUN_DIRECTORY_FULL_PATH:
@@ -118,6 +110,8 @@ def set_path_to_run_directory(custom_path=None):
     """Sets the path to the run directory. This is useful for testing."""
 
     global RUN_DIRECTORY_FULL_PATH
+    if RUN_DIRECTORY_FULL_PATH:
+        return RUN_DIRECTORY_FULL_PATH
 
     if custom_path is None:
         root_path = pathlib.Path.home()
