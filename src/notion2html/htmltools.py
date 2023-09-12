@@ -25,8 +25,8 @@ logger.setLevel(logging.WARNING)
 
 ########################### Formatting
 
-def page_link_text(title):
-    return f"~~~Link:{title}~~~"
+def page_link_text(mentioned_page_id):
+    return f"~~~Link:{mentioned_page_id}~~~"
 
 
 def attachment_link_text():
@@ -234,7 +234,8 @@ def _process_date_mention(text, soup, new_tag):
 
 
 def _process_page_mention(text, soup, new_tag):
-    page_title = text.get('plain_text')
+    # page_title = text.get('plain_text')
+    id_of_mentioned_page = text.get('mention', {}).get('page', {}).get('id', '')
 
     # There's a bug in Notion's API where page titles for page mentions
     # located INSIDE of table cells are returned as "Untitled" instead of
@@ -258,8 +259,8 @@ def _process_page_mention(text, soup, new_tag):
 
     # If we don't hit the bug above then it's straightforward, just use
     # the page title returned by the API.
-    logger.debug(f"\n\n!!! PAGE MENTION TEXT: {text}\n\n")
-    temp_tag = soup.new_string(page_link_text(page_title))
+    logger.debug(f"Page mention text: {text}")
+    temp_tag = soup.new_string(page_link_text(id_of_mentioned_page))
 
     if new_tag:
         temp_tag.append(new_tag)
@@ -453,7 +454,11 @@ def _toggle(block, soup):
 
 
 def _child_page(block, soup):
-    logger.debug(f"\n\n!!! CHILD PAGE BLOCK: {block}\n\n")
+    """The current handling ot child_page blocks here is wrong, in that we need the id of the
+    child page as the link text, not the title. But the Notion API documentation isn't clear
+    on how to get the child page ID, and searching through dev logs I don't think I've actually
+    ever seen an instance of a child page block in the wild. So, leave as is for now."""
+    logger.debug(f"!!!!! Child page block found: {block}")
     page_title = block.get('child_page', {}).get('title', '')
 
     new_tag = soup.new_tag("p")
