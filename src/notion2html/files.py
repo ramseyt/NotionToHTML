@@ -5,7 +5,6 @@
 import datetime
 from urllib.parse import unquote, urlparse
 import pathlib
-import pickle
 import logging
 import secrets
 
