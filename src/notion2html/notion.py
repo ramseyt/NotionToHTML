@@ -312,6 +312,8 @@ def get_database_from_notion(database_id):
     if networking.add_object_to_fetched(database) is False:
         logger.debug(f"Already fetched Database. Returning None. DB ID: {database.id}")
         return None
+        # logger.debug(f"Already fetched Database. Returning existing DB. DB ID: {database.id}")
+        # return networking.get_fetched_object_for_id(database.id)
 
     logger.debug(f"Don't have Database yet. Continuing with fetch. DB ID: {database.id}")
 
@@ -359,11 +361,14 @@ def get_pages_concurrently(pages):
     filtered_pages = [x for x in notion_pages if x is not None]
 
     # Deduplicate list of returned pages.
-    deduplicated_pages = list({x.id: x for x in filtered_pages}.values())
+    # deduplicated_pages = list({x.id: x for x in filtered_pages}.values())
+    # logger.debug(f"Original fetch: {len(notion_pages)} pages. Ids (not counting None): {[x.id for x in notion_pages if x is not None]}"
+    #              f"After removing none: {len(filtered_pages)} pages. Ids: {[x.id for x in filtered_pages]}"
+    #              f"After deduplication: {len(deduplicated_pages)} pages. Ids: {[x.id for x in deduplicated_pages]}")
+    # return deduplicated_pages
     logger.debug(f"Original fetch: {len(notion_pages)} pages. Ids (not counting None): {[x.id for x in notion_pages if x is not None]}"
-                 f"After removing none: {len(filtered_pages)} pages. Ids: {[x.id for x in filtered_pages]}"
-                 f"After deduplication: {len(deduplicated_pages)} pages. Ids: {[x.id for x in deduplicated_pages]}")
-    return deduplicated_pages
+                 f"After removing none: {len(filtered_pages)} pages. Ids: {[x.id for x in filtered_pages]}")
+    return filtered_pages
 
 
 def get_page(page, parent_page=None):
@@ -377,9 +382,13 @@ def get_page(page, parent_page=None):
     # we don't have this page yet so we continue fetching. If it returns false we already
     # have the page so we return None.
     if networking.add_object_to_fetched(notion_page) is False:
-        logger.debug(f"Already fetched page. Returning None. ID: {notion_page.id} "
+        # logger.debug(f"Already fetched page. Returning None. ID: {notion_page.id} "
+        #            f"Title: {notion_page.title}")
+        # return None
+
+        logger.debug(f"Already fetched page. Returning existing page. ID: {notion_page.id} "
                      f"Title: {notion_page.title}")
-        return None
+        return networking.get_fetched_object_for_id(notion_page.id)
 
     logger.debug(f"Don't have page yet. Continuing with fetch. ID: {notion_page.id} "
                      f"Title: {notion_page.title}")

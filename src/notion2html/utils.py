@@ -77,7 +77,7 @@ def find_url_for_block(block, block_type):
     return url
 
 
-def flatten_notion_page_tree(page_list):
+def flatten_notion_page_tree(page_list, seen_page_ids=None):
     """
     This function takes a list of NotionPage objects and returns a flat list of all
     NotionPage objects, including subpages.
@@ -89,11 +89,29 @@ def flatten_notion_page_tree(page_list):
         flat_list (list): A flat list of all NotionPage objects.
     """
 
-    flat_list = []
-    for page in page_list:
-        flat_list.append(page)
-        if page.have_subpages():
-            flat_list.extend(flatten_notion_page_tree(page.subpages))
+    if seen_page_ids is None:
+        seen_page_ids = []
 
-    deduplicated_pages = list({x.id: x for x in flat_list}.values())
-    return deduplicated_pages
+    flat_list = []
+
+    for page in page_list:
+        logger.debug(f"Flattening. At page: {page.id} -- {page.title}")
+
+        logger.debug(f"Seen pages: {seen_page_ids}")
+        if page.id in seen_page_ids:
+            logger.debug(f"Page {page.id} already seen. Skipping.")
+            continue
+
+        flat_list.append(page)
+        seen_page_ids.append(page.id)
+
+        if page.have_subpages():
+            logger.debug(f"Page {page.id} has subpages: {[x.id for x in page.subpages]}")
+            flat_list.extend(flatten_notion_page_tree(page.subpages, seen_page_ids))
+        else:
+            logger.debug(f"Page {page.id} DOES NOT HAVE SUBPAGES")
+
+    # deduplicated_pages = list({x.id: x for x in flat_list}.values())
+    # return deduplicated_pages
+
+    return flat_list
