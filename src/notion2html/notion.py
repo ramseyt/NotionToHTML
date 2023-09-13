@@ -95,14 +95,14 @@ class NotionPage:
     """Represents a Notion page.
     """
 
-    def __init__(self, page_id, title, properties, blocks):
+    def __init__(self, page_id):
         self.id = page_id
-        self.title = title
-        self.blocks = blocks
+        self.title = ""
+        self.blocks = []
 
         # Dict that is decoded JSON of the full page properties object
         # we got from Notion.
-        self.properties = properties
+        self.properties = {}
 
         # Dict - keys are block ids as strings, value is the entire block JSON.
         self.blocks_by_id = {}
@@ -124,8 +124,20 @@ class NotionPage:
         # Dict - key is the database id, value is the NotionDatabase object.
         self.databases = {}
 
+
+    def set_title(self, title):
+        self.title = title
+
+
+    def set_blocks(self, blocks):
+        self.blocks = blocks
+
         for block in blocks:
             self.blocks_by_id[block.get('id')] = block
+
+
+    def set_properties(self, properties):
+        self.properties = properties
 
 
     def get_placeholder_text_for_url(self, url):
@@ -308,29 +320,37 @@ def get_pages_concurrently(pages):
     logger.debug("End concurrent page data fetching")
 
     # Filter out list elements where the returned value from page fetching is None.
-    return [x for x in notion_pages if x is not None]
+    filtered_pages = [x for x in notion_pages if x is not None]
+
+    # Deduplicate list of returned pages.
+    deduplicated_pages = list({x.id: x for x in filtered_pages}.values())
+    logger.debug(f"Original fetch: {len(notion_pages)} pages. Ids (not counting None): {[x.id for x in notion_pages if x is not None]}"
+                 f"After removing none: {len(filtered_pages)} pages. Ids: {[x.id for x in filtered_pages]}"
+                 f"After deduplication: {len(deduplicated_pages)} pages. Ids: {[x.id for x in deduplicated_pages]}")
+    return deduplicated_pages
 
 
 def get_page(page, parent_page=None):
 
     page_id = utils.find_page_id(page)
-    title = utils.find_page_title(page)
-
-    logger.debug((f"Starting fetch of blocks and info for Notion page with: \n"
-                  f"Title: {title}\n"
-                  f"Id: {page_id}"))
-
-    # Check and see if we've already fetched this page.
-    if page_id in networking.get_fetched_pageids():
-        logger.debug(f"Page already fetched: {title} -- {page_id}")
-        return None
-
-    blocks = networking.fetch_all_blocks(page_id)
-    notion_page = NotionPage(page_id, title, page, blocks)
+    notion_page = NotionPage(page_id)
+    notion_page.set_title(utils.find_page_title(page))
+    notion_page.set_properties(page)
 
     # Record the page id we're fetching so we can avoid fetching it again
-    # if it's a subpage of another page, or mentioned again.
-    networking.add_page_to_fetched(notion_page)
+    # if it's a subpage of another page, or mentioned again. This is protected
+    # by a lock so we are basically doing a test-and-set. If this returns true
+    # we don't have this page yet so we continue fetching. If it returns false we already
+    # have the page so we return None.
+    if networking.add_page_to_fetched(notion_page) is False:
+        logger.debug(f"Already fetched page. Returning None. ID: {notion_page.id} "
+                     f"Title: {notion_page.title}")
+        return None
+
+    logger.debug(f"Don't have page yet. Continuing with fetch. ID: {notion_page.id} "
+                     f"Title: {notion_page.title}")
+
+    notion_page.set_blocks(networking.fetch_all_blocks(page_id))
 
     # If we have a parent page add the parent ID and title to the current page.
     if parent_page:
@@ -350,13 +370,15 @@ def get_page(page, parent_page=None):
         if subpage:
             notion_page.add_subpage(subpage)
 
+    # Log info about the complete fetch.
     logger.debug((f"Fetch complete (including any subpages) for this Notion page: \n"
-                  f"Title: {title}\n"
-                  f"Id: {page_id}\n"
+                  f"Title: {notion_page.title}\n"
+                  f"Id: {notion_page.id}\n"
                   f"Subpages: {notion_page.subpages}\n"
                   f"Subpage IDs: {notion_page.subpage_ids}\n"
                   f"Tables and Rows:\n{notion_page.tables_and_rows}\n"
                   f"Blocks: \n{notion_page.blocks}\n\n"))
+
     return notion_page
 
 

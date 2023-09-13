@@ -37,20 +37,26 @@ class FetchedPages:
     """Holds the pages that have been fetched from Notion."""
 
     def __init__(self):
-        self._notion_page_ids = set()  # A set to hold the fetched NotionPage ids
         self._notion_pages = {} # A dict to hold the fetched NotionPage objects keyed by id
         self._lock = threading.Lock()  # A lock to ensure thread safety
 
 
     def record_fetched_page(self, notion_page):
         with self._lock:
-            self._notion_page_ids.add(notion_page.id)
-            self._notion_pages[notion_page.id] = notion_page
+
+            logger.debug(f"Recording page with ID: {notion_page.id}"
+                         f"Already recorded pages: {self._notion_pages.keys()}")
+            # If we already fetched the page return false.
+            if notion_page.id in self._notion_pages:
+                return False
+            else:
+                self._notion_pages[notion_page.id] = notion_page
+                return True
 
 
     def get_all_pageids_fetched(self):
         with self._lock:
-            return list(self._notion_page_ids)
+            return self._notion_pages.keys()
 
 
     def get_page_for_id(self, page_id):
@@ -63,21 +69,19 @@ def add_page_to_fetched(notion_page):
     if FETCHED_PAGES is None:
         FETCHED_PAGES = FetchedPages()
 
-    FETCHED_PAGES.record_fetched_page(notion_page)
+    return FETCHED_PAGES.record_fetched_page(notion_page)
 
 
 def get_fetched_pageids():
-    global FETCHED_PAGES
     if FETCHED_PAGES is None:
-        FETCHED_PAGES = FetchedPages()
+        return []
 
     return FETCHED_PAGES.get_all_pageids_fetched()
 
 
 def get_fetched_page_for_id(page_id):
-    global FETCHED_PAGES
     if FETCHED_PAGES is None:
-        FETCHED_PAGES = FetchedPages()
+        return []
 
     return FETCHED_PAGES.get_page_for_id(page_id)
 
@@ -227,15 +231,15 @@ def get_network_data(url, method, file_download=False, payload=None):
                           "passed to requests. Re-raising."))
             raise
 
-        except requests.exceptions.Timeout as e:
+        except requests.exceptions.Timeout as exc:
             logger.debug(("Network request: timeout hit. "
                           "Logging exception below then waiting and then retrying..."))
-            logger.debug(str(e))
+            logger.debug(str(exc))
             time.sleep(10)
 
-        except Exception as e:
+        except Exception as exc:
             logger.debug(("Network request: Exception while fetching data! \n"
-                          f"{str(e)} \n"
+                          f"{str(exc)} \n"
                           "Retrying..."))
             time.sleep(5)
 

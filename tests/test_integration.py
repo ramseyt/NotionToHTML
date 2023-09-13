@@ -63,10 +63,12 @@ def test_integration(caplog):
     notion_database_id = "ce3f1480e9a0476fb4d814a5dc0b0828" # This is the inbox
     token = os.environ.get("NOTION_TOKEN")
 
-    notion_data = notion2html.get_from_notion(notion_database_id, token)
-    for _, db in notion_data.all_databases.items():
-        for page in db.all_pages:
-            logger.debug(f"Page: {page.title} -- {page.id}")
-
-    with logfile.open(mode="a", encoding="utf-8") as log_file:
-        log_file.write(caplog.text)
+    try:
+        notion_data = notion2html.get_from_notion(notion_database_id, token)
+        for _, db in notion_data.all_databases.items():
+            logger.debug(f"Database title: {db.title} -- {db.id}")
+            for page in db.all_pages:
+                logger.debug(f"Page: {page.title} -- {page.id}")
+    finally:
+        with logfile.open(mode="a", encoding="utf-8") as log_file:
+            log_file.write(caplog.text)
