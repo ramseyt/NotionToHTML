@@ -22,7 +22,7 @@ __status__ = "Experimental"
 NOTION_VERSION = "2022-06-28"
 NOTION_API_BASE_URL = "https://api.notion.com/v1"
 NOTION_TOKEN = ""
-FETCHED_PAGES = None
+FETCHED_OBJECTS = None
 
 
 logger = logging.getLogger('notion2html')
@@ -64,31 +64,38 @@ class FetchedObject:
 
 
 def add_object_to_fetched(notion_object):
-    global FETCHED_PAGES
-    if FETCHED_PAGES is None:
-        FETCHED_PAGES = FetchedObject()
+    if FETCHED_OBJECTS is None:
+        raise RuntimeError("FETCHED_PAGES is None but should exist when we call from here.")
 
-    return FETCHED_PAGES.record_fetched_object(notion_object)
+    return FETCHED_OBJECTS.record_fetched_object(notion_object)
 
 
 def get_fetched_ids():
-    if FETCHED_PAGES is None:
-        return []
+    if FETCHED_OBJECTS is None:
+        raise RuntimeError("FETCHED_PAGES is None but should exist when we call from here.")
 
-    return FETCHED_PAGES.get_all_ids()
+    return FETCHED_OBJECTS.get_all_ids()
 
 
 def get_fetched_object_for_id(object_id):
-    if FETCHED_PAGES is None:
-        return []
+    if FETCHED_OBJECTS is None:
+        raise RuntimeError("FETCHED_PAGES is None but should exist when we call from here.")
 
-    return FETCHED_PAGES.get_object_for_id(object_id)
+    return FETCHED_OBJECTS.get_object_for_id(object_id)
 
 
-def clear_fetched_pages():
-    global FETCHED_PAGES
-    if FETCHED_PAGES:
-        FETCHED_PAGES = None
+def create_fetched_object():
+    global FETCHED_OBJECTS
+    if FETCHED_OBJECTS is None:
+        FETCHED_OBJECTS = FetchedObject()
+    else:
+        raise RuntimeError("FETCHED_PAGES already exists but shouldn't at this point.")
+
+
+def clear_fetched_objects():
+    global FETCHED_OBJECTS
+    if FETCHED_OBJECTS:
+        FETCHED_OBJECTS = None
 
 
 def set_notion_token(token):

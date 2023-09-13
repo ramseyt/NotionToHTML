@@ -225,6 +225,7 @@ def startup(token, file_path):
     """Setup code for a single run."""
 
     networking.set_notion_token(token)
+    networking.create_fetched_object()
     if file_path:
         files.set_path_to_run_directory(file_path)
     else:
@@ -237,7 +238,7 @@ def teardown():
     # Once done fetching pages, clear the list of fetched page IDs so it's
     # not carried forward if we run this function again before the calling
     # code exits.
-    networking.clear_fetched_pages()
+    networking.clear_fetched_objects()
     networking.clear_notion_token()
     files.clear_path_to_run_directory()
     files.clear_run_id()
