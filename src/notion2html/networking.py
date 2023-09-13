@@ -33,57 +33,56 @@ class Error404NotFound(Exception):
     """Raised when a 404 is returned from a network request."""
 
 
-class FetchedPages:
-    """Holds the pages that have been fetched from Notion."""
+class FetchedObject:
+    """Holds the pages or databases that have been fetched from Notion."""
 
     def __init__(self):
-        self._notion_pages = {} # A dict to hold the fetched NotionPage objects keyed by id
+        self._notion_object = {} # Dict holds the fetched Notion pages or databases keyed by id
         self._lock = threading.Lock()  # A lock to ensure thread safety
 
 
-    def record_fetched_page(self, notion_page):
+    def record_fetched_object(self, notion_object):
         with self._lock:
-
-            logger.debug(f"Recording page with ID: {notion_page.id}"
-                         f"Already recorded pages: {self._notion_pages.keys()}")
+            logger.debug(f"Recording object with ID: {notion_object.id} "
+                         f"Already recorded objects: {self._notion_object.keys()}")
             # If we already fetched the page return false.
-            if notion_page.id in self._notion_pages:
+            if notion_object.id in self._notion_object:
                 return False
             else:
-                self._notion_pages[notion_page.id] = notion_page
+                self._notion_object[notion_object.id] = notion_object
                 return True
 
 
-    def get_all_pageids_fetched(self):
+    def get_all_ids(self):
         with self._lock:
-            return self._notion_pages.keys()
+            return list(self._notion_object.keys())
 
 
-    def get_page_for_id(self, page_id):
+    def get_object_for_id(self, page_id):
         with self._lock:
-            return self._notion_pages[page_id]
+            return self._notion_object[page_id]
 
 
-def add_page_to_fetched(notion_page):
+def add_object_to_fetched(notion_object):
     global FETCHED_PAGES
     if FETCHED_PAGES is None:
-        FETCHED_PAGES = FetchedPages()
+        FETCHED_PAGES = FetchedObject()
 
-    return FETCHED_PAGES.record_fetched_page(notion_page)
+    return FETCHED_PAGES.record_fetched_object(notion_object)
 
 
-def get_fetched_pageids():
+def get_fetched_ids():
     if FETCHED_PAGES is None:
         return []
 
-    return FETCHED_PAGES.get_all_pageids_fetched()
+    return FETCHED_PAGES.get_all_ids()
 
 
-def get_fetched_page_for_id(page_id):
+def get_fetched_object_for_id(object_id):
     if FETCHED_PAGES is None:
         return []
 
-    return FETCHED_PAGES.get_page_for_id(page_id)
+    return FETCHED_PAGES.get_object_for_id(object_id)
 
 
 def clear_fetched_pages():

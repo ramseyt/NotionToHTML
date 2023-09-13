@@ -61,12 +61,12 @@ class NotionDatabase:
     """Represents a Notion database.
     """
 
-    def __init__(self, database_id, title_blocks, properties):
+    def __init__(self, database_id):
         self.id = database_id
 
         # List of title blocks that make up the database title.
-        self.title_blocks = title_blocks
-        self.title = htmltools.convert_rich_text_to_string(title_blocks)
+        self.title_blocks = []
+        self.title = ""
 
         # List of NotionPage objects that are top-level database items.
         self.top_level_pages = []
@@ -77,6 +77,15 @@ class NotionDatabase:
 
         # Dict that is decoded JSON of the full database properties object
         # we got from Notion.
+        self.properties = {}
+
+
+    def set_title_blocks(self, title_blocks):
+        self.title_blocks = title_blocks
+        self.title = htmltools.convert_rich_text_to_string(title_blocks)
+
+
+    def set_properties(self, properties):
         self.properties = properties
 
 
@@ -121,8 +130,8 @@ class NotionPage:
         # for that table.
         self.tables_and_rows = {}
 
-        # Dict - key is the database id, value is the NotionDatabase object.
-        self.databases = {}
+        # List of NotionDatabase objects that are embedded in the page content.
+        self.databases = []
 
 
     def set_title(self, title):
@@ -150,6 +159,10 @@ class NotionPage:
 
     def have_subpages(self):
         return len(self.subpages) != 0
+
+
+    def have_databases(self):
+        return len(self.databases) != 0
 
 
     def add_subpage(self, subpage):
@@ -184,11 +197,16 @@ class NotionPage:
 
 
     def add_database(self, database):
-        self.databases[database.id] = database
+        logger.debug(f"Adding database to page: {self.id}, {self.title} -- Database: {database.id}, {database.title}")
+        self.databases.append(database)
+        logger.debug(f"databases is now: {self.databases} for page: {self.id}, {self.title}")
 
 
-    def get_database_for_id(self, database_id):
-        return self.databases[database_id]
+    def get_all_databases(self):
+        databases = self.databases
+        for subpage in self.subpages:
+            databases.extend(subpage.get_all_databases())
+        return databases
 
 
 class Attachment:
@@ -234,8 +252,8 @@ def teardown():
 def get_from_notion(notion_id, notion_token, file_path=None):
 
     logger.debug(f"Notion id passed in: {notion_id}")
-    startup(notion_token, file_path)
 
+    startup(notion_token, file_path)
     page = None
     database = None
     result = NotionResult()
@@ -254,14 +272,19 @@ def get_from_notion(notion_id, notion_token, file_path=None):
 
     if page:
         result.add_top_level_page(page)
-        return result
+        for found_db in page.get_all_databases():
+            result.add_database(found_db)
 
-    elif database:
+    if database:
         result.add_database(database)
-        return result
+        logger.debug(f"Added database to result: {database.title} -- {database.id}")
+        for page in database.all_pages:
+            all_databases = page.get_all_databases()
+            for db in all_databases:
+                result.add_database(db)
+                logger.debug(f"Added database to result: {db.title} -- {db.id}")
 
-    else:
-        return result
+    return result
 
 
 def get_page_with_id(page_id):
@@ -278,14 +301,26 @@ def get_database_from_notion(database_id):
        Return: NotionDatabase object."""
 
     logger.debug(f"Attempting database fetch from Notion database id: {database_id}")
+    database = NotionDatabase(database_id)
+
+    # Record the database id we're fetching so we can avoid fetching it again
+    # if it's mentioned from another page. This is protected
+    # by a lock so we are basically doing a test-and-set. If this returns true
+    # we don't have this page yet so we continue fetching. If it returns false we already
+    # have the page so we return None.
+    if networking.add_object_to_fetched(database) is False:
+        logger.debug(f"Already fetched Database. Returning None. DB ID: {database.id}")
+        return None
+
+    logger.debug(f"Don't have Database yet. Continuing with fetch. DB ID: {database.id}")
+
     all_db_info = networking.fetch_database_info(database_id)
-    db_id = all_db_info.get('id', '')
-    db_title_blocks = all_db_info.get('title', [])
+    database.set_properties(all_db_info)
+    database.set_title_blocks(all_db_info.get('title', []))
 
-    database = NotionDatabase(db_id, db_title_blocks, all_db_info)
     pages_info = networking.fetch_pages_info_from_database(database_id)
-
-    logger.debug(f"Total number of database pages found: {len(pages_info)}")
+    logger.debug(f"Database id: {database.id} Title: {database.title} "
+                 f"Total number of database pages found: {len(pages_info)}")
     database.add_pages(get_pages_concurrently(pages_info))
 
     return database
@@ -334,15 +369,13 @@ def get_page(page, parent_page=None):
 
     page_id = utils.find_page_id(page)
     notion_page = NotionPage(page_id)
-    notion_page.set_title(utils.find_page_title(page))
-    notion_page.set_properties(page)
 
     # Record the page id we're fetching so we can avoid fetching it again
     # if it's a subpage of another page, or mentioned again. This is protected
     # by a lock so we are basically doing a test-and-set. If this returns true
     # we don't have this page yet so we continue fetching. If it returns false we already
     # have the page so we return None.
-    if networking.add_page_to_fetched(notion_page) is False:
+    if networking.add_object_to_fetched(notion_page) is False:
         logger.debug(f"Already fetched page. Returning None. ID: {notion_page.id} "
                      f"Title: {notion_page.title}")
         return None
@@ -350,6 +383,8 @@ def get_page(page, parent_page=None):
     logger.debug(f"Don't have page yet. Continuing with fetch. ID: {notion_page.id} "
                      f"Title: {notion_page.title}")
 
+    notion_page.set_title(utils.find_page_title(page))
+    notion_page.set_properties(page)
     notion_page.set_blocks(networking.fetch_all_blocks(page_id))
 
     # If we have a parent page add the parent ID and title to the current page.
@@ -363,12 +398,16 @@ def get_page(page, parent_page=None):
     # Do HTML conversion.
     htmltools.convert_page_to_html(notion_page)
 
-    # Recursively fetch all subpages. This will get all subpages of subpages
-    # and so on for the entire tree of pages at any depth.
-    subpages = get_subpages_of_page(notion_page)
-    for subpage in subpages:
-        if subpage:
-            notion_page.add_subpage(subpage)
+    # Recursively fetch all subpages or subdatabases.
+    subpages_or_subdatabases = get_subpages_or_subdatabases(notion_page)
+    for item in subpages_or_subdatabases:
+        logger.debug(f"Adding this subpage or subdatabase: {item.id}, {item.title}")
+        if isinstance(item, NotionPage):
+            notion_page.add_subpage(item)
+            logger.debug(f"ADDED THIS SUBPAGE: {item.id}, {item.title}")
+        if isinstance(item, NotionDatabase):
+            notion_page.add_database(item)
+            logger.debug(f"ADDED THIS DATABASE: {item.id}, {item.title}")
 
     # Log info about the complete fetch.
     logger.debug((f"Fetch complete (including any subpages) for this Notion page: \n"
@@ -426,7 +465,7 @@ def handle_page_special_cases(notion_page):
             notion_page.add_attachment(attachment)
 
 
-def get_subpages_of_page(notion_page):
+def get_subpages_or_subdatabases(notion_page):
     """I originally tried to detect only true subpages as opposed to page mentions (which are links
     to pages outside the page tree of the current page). But ultimately I couldn't figure out how to
     reliably detect true subpages.
@@ -437,8 +476,9 @@ def get_subpages_of_page(notion_page):
     will prevent fetch loops, and avoid missing pages.
     """
 
-    subpage_ids = []
-    subpages = []
+    sub_page_ids = []
+    sub_database_ids = []
+    sub_pages_or_sub_databases = []
 
     # Determine if there's any subpages of this page. If so, get their IDs.
     # There are two known ways to detect page mentions:
@@ -451,7 +491,7 @@ def get_subpages_of_page(notion_page):
         # A child_page block is always a subpage, when a block is of type child_page, the
         # id property of the block is ALSO the page ID of the subpage.
         if block.get('type') == 'child_page':
-            subpage_ids.append(block_id)
+            sub_page_ids.append(block_id)
 
         # The mention object can be anywhere in the list of rich_text objects, so we
         # need to look through all of them.
@@ -468,28 +508,45 @@ def get_subpages_of_page(notion_page):
                 texts = block.get('paragraph', {}).get('rich_text', [])
 
             for text in texts:
+                # This detects mentioned pages
                 if text.get('mention', {}) and text.get('mention', {}).get('page', {}):
                     mentioned_page_id = text.get('mention', {}).get('page', {}).get('id', '')
-                    subpage_ids.append(mentioned_page_id)
+                    sub_page_ids.append(mentioned_page_id)
+
+                # Thid detects mentioned databases
+                if text.get('mention', {}) and text.get('mention', {}).get('database', {}):
+                    mentioned_database_id = text.get('mention', {}).get('database', {}).get('id', '')
+                    sub_database_ids.append(mentioned_database_id)
 
     # If we have subpages fetch them.
-    if subpage_ids:
-        for subpageid in subpage_ids:
-
-            # If we already fetched this page don't fetch again AND don't count it as a subpage.
-            # This will prevent a page from appearing at multiple places in the page tree. The
-            # downside is that it's not determinstic which page will be fetched first if pages are
-            # fetched concurrently, and even if they're not it's not clear which page will be the
-            # parent page if it's mentoned from multiple places. This is the best we can do without
-            # a way to reliably detect true subpages.
-            if subpageid in networking.get_fetched_pageids():
-                continue
-
+    if sub_page_ids:
+        logger.debug(f"Found sub-PAGES for page: {notion_page.id} -- {notion_page.title} -- "
+                     f"Sub-page IDs: {sub_page_ids}")
+        for subpageid in sub_page_ids:
             subpage = networking.fetch_page(subpageid)
             fetched_sub_page = get_page(subpage, notion_page)
-            subpages.append(fetched_sub_page)
+            if fetched_sub_page:
+                sub_pages_or_sub_databases.append(fetched_sub_page)
+                logger.debug(f"Page appended -- Processing subpage id: {subpageid} "
+                             f"-- for parent page: {notion_page.id}")
+            else:
+                logger.debug(f"PAGE NOT APPENDED -- Processing subpage id: {subpageid} "
+                             f"-- for parent page: {notion_page.id}")
 
-    return subpages
+    if sub_database_ids:
+        logger.debug(f"Found sub-DATABASES for page: {notion_page.id} -- {notion_page.title} "
+                     f"Sub-database IDs: {sub_database_ids}")
+        for sub_db_id in sub_database_ids:
+            db = get_database_from_notion(sub_db_id)
+            if db:
+                sub_pages_or_sub_databases.append(db)
+                logger.debug(f"Database appended -- Processing database id: {sub_db_id} "
+                             f"-- for parent page: {notion_page.id}")
+            else:
+                logger.debug(f"DATABASE NOT APPENDED -- Processing database id: {sub_db_id} "
+                             f"-- for parent page: {notion_page.id}")
+
+    return sub_pages_or_sub_databases
 
 
 def get_column_blocks(block):
