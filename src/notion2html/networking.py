@@ -129,6 +129,10 @@ def get_notion_users():
                      "more information.")
         returned_data = None
 
+    except Exception as exc:
+        logger.debug(f"Exception fetching users from Notion. Not a 403. Exception: {str(exc)}")
+        returned_data = None
+
     if returned_data is None:
         return
 
