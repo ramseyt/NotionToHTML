@@ -22,7 +22,9 @@ __status__ = "Experimental"
 NOTION_VERSION = "2022-06-28"
 NOTION_API_BASE_URL = "https://api.notion.com/v1"
 NOTION_TOKEN = ""
+
 FETCHED_OBJECTS = None
+USERS_FROM_NOTION = {}
 
 
 logger = logging.getLogger('notion2html')
@@ -31,6 +33,10 @@ logger.setLevel(logging.WARNING)
 
 class Error404NotFound(Exception):
     """Raised when a 404 is returned from a network request."""
+
+
+class Error403NotAuthorized(Exception):
+    """Raised when a 403 is returned from a network request."""
 
 
 class FetchedObject:
@@ -110,6 +116,35 @@ def clear_notion_token():
     NOTION_TOKEN = None
 
 
+def get_notion_users():
+
+    try:
+        returned_data = fetch_all_users()
+        logger.debug(f"Users returned from Notion: {returned_data}")
+
+    except Error403NotAuthorized:
+        logger.debug("The Notion token userd is not authorized to fetch users. User information "
+                     "capabilities  are required to access Notion users. See "
+                     "https://developers.notion.com/reference/capabilities#user-capabilities for "
+                     "more information.")
+        returned_data = None
+
+    if returned_data is None:
+        return
+
+    global USERS_FROM_NOTION
+    for user_raw_info in returned_data:
+        user_id = user_raw_info.get("id", "")
+        user_name = user_raw_info.get("name", "")
+
+        USERS_FROM_NOTION[user_id] = user_name
+
+
+def clear_notion_users():
+    global USERS_FROM_NOTION
+    USERS_FROM_NOTION = {}
+
+
 def download_file_and_save(url, file_name):
     """Download a file from a url.
     Returns the full path to the downloaded file.
@@ -180,6 +215,31 @@ def fetch_pages_info_from_database(database_id, start_cursor=None):
         return returned_data.get('results', []) + new_results # type: ignore
 
 
+def fetch_all_users(start_cursor=None):
+    url = f"{NOTION_API_BASE_URL}/users"
+
+    logger.debug("Start fetching database pages.")
+    logger.debug(f"Start cursor: {start_cursor}")
+
+    if start_cursor is None:
+        returned_data = get_network_data(url, "get")
+    else:
+        returned_data = get_network_data(url, "get", \
+                                         payload={"start_cursor": start_cursor})
+
+    if returned_data is None:
+        raise RuntimeError("Error fetching users.")
+
+    # If has more is false then we got all the results. If not, we need to deal with pagination.
+    if not returned_data.get('has_more'): # type: ignore
+        logger.debug("End fetching users.")
+        return returned_data.get('results', [])  # type: ignore
+    else:
+        # concatenate results with next set of results
+        new_results = fetch_all_users(returned_data.get('next_cursor')) # type: ignore
+        return returned_data.get('results', []) + new_results # type: ignore
+
+
 def fetch_page(page_id):
     url = f"{NOTION_API_BASE_URL}/pages/{page_id}"
 
@@ -230,6 +290,9 @@ def get_network_data(url, method, file_download=False, payload=None):
                 return data
 
         except Error404NotFound:
+            raise
+
+        except Error403NotAuthorized:
             raise
 
         except ValueError:
@@ -327,6 +390,16 @@ def _handle_response(response, file_download=False):
                          f"Response full text: {response.text}")
         logger.debug(error_message)
         raise Error404NotFound(error_message)
+
+    if response.status_code == 403 and data.get('code', '') == 'restricted_resource':
+        message = data.get('message', '')
+        error_message = ("403 forbidden. WON'T RETRY. \n"
+                         f"URL: {response.url} \n"
+                         f"Response message: {message} \n"
+                         f"Response headers: {response.headers} \n"
+                         f"Response full text: {response.text}")
+        logger.debug(error_message)
+        raise Error403NotAuthorized(error_message)
 
     if response.ok is False:
         logger.debug(("Got non-200 status code. \n"

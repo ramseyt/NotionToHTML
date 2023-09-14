@@ -62,11 +62,12 @@ def convert_page_to_html(notion_page):
     try:
         soup = flatten_blocks_into_html(notion_page, notion_page.blocks, soup)
     except Exception as exc:
-        logger.debug(("Exception hit while constructing HTML for page. Skipping page:\n"
+        error_message = ("Exception hit while constructing HTML for page. Skipping page:\n"
                         f"Page: {notion_page}\n"
                         f"Exception: {exc}"
-                        f"Traceback: {traceback.format_exc()}"))
-        raise
+                        f"Traceback: {traceback.format_exc()}")
+        logger.debug(error_message)
+        notion_page.add_error(error_message)
 
     notion_page.add_soup(soup)
     notion_page.add_html(str(soup))
@@ -137,7 +138,7 @@ def flatten_blocks_into_html(notion_page, blocks, soup):
         if block_type in block_types_with_attachments():
             handler(block, soup, notion_page)
 
-        elif block_type in ["bulleted_list_item", "numbered_list_item", "to_do"]:
+        elif block_type in ["bulleted_list_item", "numbered_list_item", "to_do", "child_page"]:
             handler(block, soup, notion_page)
 
         elif block_type in ["table", "synced_block"]:
@@ -453,12 +454,17 @@ def _toggle(block, soup):
     soup.append(details_tag)
 
 
-def _child_page(block, soup):
+def _child_page(block, soup, notion_page):
     """The current handling ot child_page blocks here is wrong, in that we need the id of the
     child page as the link text, not the title. But the Notion API documentation isn't clear
     on how to get the child page ID, and searching through dev logs I don't think I've actually
     ever seen an instance of a child page block in the wild. So, leave as is for now."""
+
     logger.debug(f"!!!!! Child page block found: {block}")
+    notion_page.add_error("Found a child page block. This probably isn't being handled right. "
+                          "Please create a GitHub issue and include this block information if "
+                          f"you can share it: {block}")
+
     page_title = block.get('child_page', {}).get('title', '')
 
     new_tag = soup.new_tag("p")
@@ -676,10 +682,10 @@ def _image(block, soup, notion_page):
     try:
         image_placeholder_text = NavigableString(notion_page.get_placeholder_text_for_url(image_url))
     except Exception:
-        logger.debug(f"Exception while trying to get placeholder text for image: \
-                        \nDetected image URL: {image_url} \
-                        \nImage URLs on page object: {notion_page.attachments.keys()} \
-                        \nBlock: {block}")
+        notion_page.add_error("Exception while trying to get placeholder text for image. "
+                              f"Detected image URL: {image_url} "
+                              f"Image URLs on page object: {notion_page.attachments.keys()} "
+                              f"Block: {block}")
         image_placeholder_text = NavigableString('')
 
     soup.append(image_placeholder_text)
@@ -721,7 +727,6 @@ def extract_page_properties(notion_page, soup):
         'select': _select,
         'multi_select': _multi_select,
         'date': _date,
-        'people': _people,
         'files': _files,
         'checkbox': _checkbox,
         'url': _url,
@@ -731,7 +736,12 @@ def extract_page_properties(notion_page, soup):
         'last_edited_time': _last_edited_time,
         'formula': _formula,
         'relation': _relation,
-        'rollup': _rollup
+        'rollup': _rollup,
+        'status': _status,
+        'people': _people,
+        'created_by': _created_by,
+        'last_edited_by': _last_edited_by,
+        'unique_id': _unique_id
     }
 
     # Start with the parent page title, if there is one.
@@ -751,9 +761,14 @@ def extract_page_properties(notion_page, soup):
         handler = handlers.get(property_type)
 
         if handler is None:
-            raise ValueError(f"Unknown property type: {property_type}! Raising exception.")
+            notion_page.add_error(f"!!!!!!!! Unknown property type! Skipping!!!!!!!: {property_type} -- Value: {property_value}")
+            continue
 
-        handler(property_name, property_value, soup)
+        if property_type in ['people', 'created_by', 'last_edited_by']:
+            handler(property_name, property_value, soup, notion_page)
+
+        else:
+            handler(property_name, property_value, soup)
 
     return soup
 
@@ -860,17 +875,6 @@ def _date(property_name, property_value, soup):
         soup.append(p_tag)
 
 
-def _people(property_name, property_value, soup):
-    people = ', '.join([person.get('name', '') for person in property_value.get('people', [])])
-
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(people)
-    soup.append(p_tag)
-
-
 def _files(property_name, property_value, soup):
     files = ', '.join([file.get('name', '') for file in property_value.get('files', [])])
     p_tag = soup.new_tag("p")
@@ -903,6 +907,8 @@ def _checkbox(property_name, property_value, soup):
 
 def _url(property_name, property_value, soup):
     url = property_value.get('url', '')
+    if url is None:
+        url = ' '
 
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
@@ -915,7 +921,11 @@ def _url(property_name, property_value, soup):
 
 
 def _email(property_name, property_value, soup):
+    # logger.debug(f"Email property -- Prop Name: {property_name} -- Prop Value: {property_value}")
     email = property_value.get('email', '')
+    if email is None:
+        email = ' '
+
     email_url = f"mailto:{email}"
 
     p_tag = soup.new_tag("p")
@@ -931,6 +941,8 @@ def _email(property_name, property_value, soup):
 
 def _phone_number(property_name, property_value, soup):
     phone_number = property_value.get('phone_number', '')
+    if phone_number is None:
+        phone_number = ' '
 
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
@@ -942,25 +954,31 @@ def _phone_number(property_name, property_value, soup):
 
 def _created_time(property_name, property_value, soup):
     created_time_raw = property_value.get('created_time', '')
-    created_time = convert_to_local(created_time_raw)
+    if created_time_raw is None:
+        created_time = ' '
+    else:
+        created_time = convert_to_local(created_time_raw).strftime('%Y-%m-%d %H:%M:%S')
 
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append(created_time.strftime('%Y-%m-%d %H:%M:%S'))
+    p_tag.append(created_time)
     soup.append(p_tag)
 
 
 def _last_edited_time(property_name, property_value, soup):
     last_edited_time_raw = property_value.get('last_edited_time', '')
-    last_edited_time = convert_to_local(last_edited_time_raw)
+    if last_edited_time_raw is None:
+        last_edited_time = ' '
+    else:
+        last_edited_time = convert_to_local(last_edited_time_raw).strftime('%Y-%m-%d %H:%M:%S')
 
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append(last_edited_time.strftime('%Y-%m-%d %H:%M:%S'))
+    p_tag.append(last_edited_time)
     soup.append(p_tag)
 
 
@@ -968,6 +986,8 @@ def _formula(property_name, property_value, soup):
 
     formula_type = property_value.get('formula', {}).get('type', '')
     formula_result = property_value.get('formula', {}).get(formula_type, '')
+    if formula_result is None:
+        formula_result = ' '
 
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
@@ -978,26 +998,138 @@ def _formula(property_name, property_value, soup):
 
 
 def _relation(property_name, property_value, soup):
+    logger.debug(f"Relation property -- Prop Name: {property_name} -- Prop Value: {property_value}")
 
     relation_values = property_value.get('relation', [])
+    if relation_values is None:
+        relation_values = []
     ids = [x.get('id', '') for x in relation_values]
+    relation = str(ids).lstrip('[').rstrip(']').replace('\'', '').replace(' ', '')
+    logger.debug(f"Relation value: {relation}")
 
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append(str(ids).lstrip('[').rstrip(']').replace('\'', '').replace(' ', ''))
+    p_tag.append(relation)
     soup.append(p_tag)
 
 
-# Need to do something better for Rollup property type.
-# As of 2023-09-12 the API documentation for this type is here, but I think
+# As of 2023-09-12 the API documentation for rollup type is here, but I think
 # the example is wrong? The type of the example is relation, not rollup.
 # https://developers.notion.com/reference/page-property-values#rollup
-def _rollup(property_name, _, soup):
+def _rollup(property_name, property_value, soup):
+    logger.debug(f"Rollup property -- Prop Name: {property_name} -- Prop Value: {property_value}")
+    rollup_type = property_value.get('rollup', {}).get('type', '')
+    rollup_value = str(property_value.get('rollup', {}).get(rollup_type, ''))
+
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append("Rollup property types not yet supported.")
+    p_tag.append(rollup_value)
+    soup.append(p_tag)
+
+
+def _status(property_name, property_value, soup):
+    logger.debug(f"Status property -- Prop Name: {property_name} -- Prop Value: {property_value}")
+    status_text = property_value.get('status', {}).get('name', '')
+
+    p_tag = soup.new_tag("p")
+    b_tag = soup.new_tag("b")
+    b_tag.string = f"{property_name}: "
+    p_tag.append(b_tag)
+    p_tag.append(str(status_text))
+    soup.append(p_tag)
+
+
+def _unique_id(property_name, property_value, soup):
+    logger.debug(f"Unique ID property -- Prop Name: {property_name} -- Prop Value: {property_value}")
+    prefix = property_value.get('unique_id', {}).get('prefix', '')
+    if prefix is None:
+        prefix = ''
+
+    number = property_value.get('unique_id', {}).get('number', '')
+
+    unique_id = f"{prefix}{number}"
+
+    p_tag = soup.new_tag("p")
+    b_tag = soup.new_tag("b")
+    b_tag.string = f"{property_name}: "
+    p_tag.append(b_tag)
+    p_tag.append(str(unique_id))
+    soup.append(p_tag)
+
+
+def _people(property_name, property_value, soup, notion_page):
+    logger.debug(f"People property -- Prop Name: {property_name} -- Prop Value: {property_value}")
+    people = property_value.get('people', [])
+
+    all_people_names = ""
+    for person in people:
+        user_id = person.get('id', '')
+        username = notion_page.get_username_for_user_id(user_id)
+
+        if not username:
+            notion_page.add_error(f"Could not find username for user ID {user_id}. This may "
+                                   "be because the Notion token used is not authorized to fetch "
+                                   "users. User information capabilities are required to access "
+                                   "Notion users. See "
+                                   "https://developers.notion.com/reference/capabilities#user-capabilities for "
+                                   "more information. Using user ID instead.")
+            all_people_names += f"{user_id}, "
+        else:
+            all_people_names += f"{username}, "
+
+    all_people_names = all_people_names.rstrip(', ')
+
+    p_tag = soup.new_tag("p")
+    b_tag = soup.new_tag("b")
+    b_tag.string = f"{property_name}: "
+    p_tag.append(b_tag)
+    p_tag.append(all_people_names)
+    soup.append(p_tag)
+
+
+def _created_by(property_name, property_value, soup, notion_page):
+    logger.debug(f"Created By property -- Prop Name: {property_name} -- Prop Value: {property_value}")
+    user_id = str(property_value.get('created_by', {}).get('id', ''))
+    username = notion_page.get_username_for_user_id(user_id)
+
+    if not username:
+        notion_page.add_error(f"Could not find username for user ID {user_id}. This may "
+                                "be because the Notion token used is not authorized to fetch "
+                                "users. User information capabilities are required to access "
+                                "Notion users. See "
+                                "https://developers.notion.com/reference/capabilities#user-capabilities for "
+                                "more information. Using user ID instead.")
+        username = user_id
+
+    p_tag = soup.new_tag("p")
+    b_tag = soup.new_tag("b")
+    b_tag.string = f"{property_name}: "
+    p_tag.append(b_tag)
+    p_tag.append(username)
+    soup.append(p_tag)
+
+
+def _last_edited_by(property_name, property_value, soup, notion_page):
+    logger.debug(f"Last Edited By property -- Prop Name: {property_name} -- Prop Value: {property_value}")
+    user_id = str(property_value.get('last_edited_by', {}).get('id', ''))
+    username = notion_page.get_username_for_user_id(user_id)
+
+    if not username:
+        notion_page.add_error(f"Could not find username for user ID {user_id}. This may "
+                                "be because the Notion token used is not authorized to fetch "
+                                "users. User information capabilities are required to access "
+                                "Notion users. See "
+                                "https://developers.notion.com/reference/capabilities#user-capabilities for "
+                                "more information. Using user ID instead.")
+        username = user_id
+
+    p_tag = soup.new_tag("p")
+    b_tag = soup.new_tag("b")
+    b_tag.string = f"{property_name}: "
+    p_tag.append(b_tag)
+    p_tag.append(username)
     soup.append(p_tag)

@@ -177,6 +177,7 @@ class NotionPage:
         self.parent_page_id = ""
         self.soup = None
         self.html = ""
+        self.errors = []
 
         # Dict - key is the full attachment URL, value is an Attachment object.
         self.attachments = {}
@@ -187,6 +188,9 @@ class NotionPage:
 
         # List of NotionDatabase objects that are embedded in the page content.
         self.databases = []
+
+        # All possible users who could be mentioned in this page.
+        self.all_users = networking.USERS_FROM_NOTION
 
 
     def set_title(self, title):
@@ -269,6 +273,29 @@ class NotionPage:
         return self.databases
 
 
+    def get_username_for_user_id(self, user_id):
+
+        if user_id in self.all_users:
+            return self.all_users[user_id]
+
+        # If we don't have the user in our list of users, return an empty string.
+        return ""
+
+
+    def has_errors(self):
+        return len(self.errors) != 0
+
+
+    def get_errors(self):
+        return self.errors
+
+
+    def add_error(self, error):
+        logger.debug(f"LOGGING ERROR!! Page ID: {self.id} -- Title: {self.title} -- Error: {error}")
+        self.errors.append(error)
+
+
+
 class Attachment:
     """File attachment data. Includes images, PDFs, etc."""
 
@@ -286,10 +313,13 @@ def startup(token, file_path):
 
     networking.set_notion_token(token)
     networking.create_fetched_object()
+
     if file_path:
         files.set_path_to_run_directory(file_path)
     else:
         files.set_path_to_run_directory()
+
+    networking.get_notion_users()
 
 
 def teardown():
@@ -300,6 +330,7 @@ def teardown():
     # code exits.
     networking.clear_fetched_objects()
     networking.clear_notion_token()
+    networking.clear_notion_users()
     files.clear_path_to_run_directory()
     files.clear_run_id()
 

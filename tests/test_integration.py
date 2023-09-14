@@ -74,6 +74,9 @@ def test_integration(caplog):
         logger.debug("All Pages!!!!")
         for page in notion_data.get_pages():
             logger.debug(f"Page: {page.title} -- {page.id}")
+            if page.has_errors():
+                for error in page.get_errors():
+                    logger.debug(f"Error: {error}")
 
     except Exception as exc:
         logger.exception(exc)
