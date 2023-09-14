@@ -708,17 +708,31 @@ def _audio(block, soup, notion_page):
 
 ########################### Extract Properties
 
+def extract_files_properties_only(notion_page):
+
+    properties = notion_page.properties.get('properties', {})
+
+    files_properties = []
+    for property_name, property_value in properties.items():
+        property_type = property_value.get('type')
+
+        if property_type == 'files':
+            logger.debug(f"Found files property: Name: {property_name} -- Value: {property_value}")
+            files_properties.append(property_value)
+
+    return files_properties
+
+
 def extract_page_properties(notion_page, soup):
     """
     This function takes a Notion page object as input and returns the page properties
-    as HTML and dict.
+    as a BeautifulSoup object.
 
     Args:
         page (dict): A dictionary representing a Notion page object.
 
     Returns:
-        List: First item is an HTML string representing the page properties.
-        Second item is a dict with keys as property names and values as HTML string.
+        BeautifulSoup object representing the page properties.
     """
 
     handlers = {
@@ -765,7 +779,7 @@ def extract_page_properties(notion_page, soup):
             notion_page.add_error(f"!!!!!!!! Unknown property type! Skipping!!!!!!!: {property_type} -- Value: {property_value}")
             continue
 
-        if property_type in ['people', 'created_by', 'last_edited_by']:
+        if property_type in ['people', 'created_by', 'last_edited_by', 'files']:
             handler(property_name, property_value, soup, notion_page)
 
         else:
@@ -876,13 +890,23 @@ def _date(property_name, property_value, soup):
         soup.append(p_tag)
 
 
-def _files(property_name, property_value, soup):
-    files = ', '.join([file.get('name', '') for file in property_value.get('files', [])])
+def _files(property_name, property_value, soup, notion_page):
+    logger.debug(f"Files property -- Prop Name: {property_name} -- Prop Value: {property_value}")
+
+    all_files = property_value.get('files', [])
+    placeholder_text = ""
+    for file in all_files:
+        file_url = file.get('file', {}).get('url', '')
+
+        placeholder_text += f"{notion_page.get_placeholder_text_for_url(file_url)}, "
+
+    placeholder_text = placeholder_text.rstrip(', ')
+
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append(files)
+    p_tag.append(placeholder_text)
     soup.append(p_tag)
 
 
