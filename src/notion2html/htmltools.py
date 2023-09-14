@@ -1122,7 +1122,7 @@ def _created_by(property_name, property_value, soup, notion_page):
     username = notion_page.get_username_for_user_id(user_id)
 
     if not username:
-        notion_page.add_error(f"Could not find username for user ID {user_id}. This may "
+        notion_page.add_error(f"Created By property - Could not find username for user ID {user_id}. This may "
                                 "be because the Notion token used is not authorized to fetch "
                                 "users. User information capabilities are required to access "
                                 "Notion users. See "
@@ -1144,7 +1144,7 @@ def _last_edited_by(property_name, property_value, soup, notion_page):
     username = notion_page.get_username_for_user_id(user_id)
 
     if not username:
-        notion_page.add_error(f"Could not find username for user ID {user_id}. This may "
+        notion_page.add_error(f"Last Edited By property - Could not find username for user ID {user_id}. This may "
                                 "be because the Notion token used is not authorized to fetch "
                                 "users. User information capabilities are required to access "
                                 "Notion users. See "

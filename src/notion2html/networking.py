@@ -169,16 +169,6 @@ def download_file_and_save(url, file_name):
     return full_file_path
 
 
-def fetch_block(block_id):
-    url = f"{NOTION_API_BASE_URL}/blocks/{block_id}"
-
-    returned_data = get_network_data(url, "get")
-    if returned_data is None:
-        raise RuntimeError(f"Error fetching block with ID: {block_id}")
-
-    return returned_data
-
-
 def fetch_database_info(database_id):
     url = f"{NOTION_API_BASE_URL}/databases/{database_id}"
 
