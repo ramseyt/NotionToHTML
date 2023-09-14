@@ -422,9 +422,9 @@ def get_pages_concurrently(pages):
     return deduplicated_pages
 
 
-def get_page(page, parent_page=None):
+def get_page(page_properties, parent_page=None):
 
-    page_id = utils.find_page_id(page)
+    page_id = utils.find_page_id(page_properties)
     notion_page = NotionPage(page_id)
 
     # Record the page id we're fetching so we can avoid fetching it again
@@ -440,9 +440,9 @@ def get_page(page, parent_page=None):
     logger.debug(f"Don't have page yet. Continuing with fetch. ID: {notion_page.id} "
                      f"Title: {notion_page.title}")
 
-    notion_page.set_title(utils.find_page_title(page))
-    notion_page.set_properties(page)
-    notion_page.set_blocks(networking.fetch_all_blocks(page_id))
+    notion_page.set_title(utils.find_page_title(page_properties))
+    notion_page.set_properties(page_properties)
+    notion_page.set_blocks(networking.fetch_all_blocks(notion_page.id))
 
     # If we have a parent page add the parent ID and title to the current page.
     if parent_page:
@@ -459,9 +459,11 @@ def get_page(page, parent_page=None):
     subpages_or_subdatabases = get_subpages_or_subdatabases(notion_page)
     for item in subpages_or_subdatabases:
         logger.debug(f"Adding this subpage or subdatabase: {item.id}, {item.title}")
+
         if isinstance(item, NotionPage):
             notion_page.add_subpage(item)
             logger.debug(f"ADDED THIS SUBPAGE: {item.id}, {item.title}")
+
         if isinstance(item, NotionDatabase):
             notion_page.add_database(item)
             logger.debug(f"ADDED THIS DATABASE: {item.id}, {item.title}")
