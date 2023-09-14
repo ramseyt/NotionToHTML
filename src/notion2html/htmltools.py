@@ -14,9 +14,8 @@ from bs4 import BeautifulSoup, NavigableString
 
 
 __author__ = "Ramsey Tantawi"
-__maintainer__ = "Ramsey Tantawi"
 __email__ = "ramsey@tantawi.com"
-__status__ = "Experimental"
+__status__ = "Production"
 
 
 logger = logging.getLogger('notion2html')

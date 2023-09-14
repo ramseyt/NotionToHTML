@@ -12,7 +12,6 @@ from . import htmltools
 
 
 __author__ = "Ramsey Tantawi"
-__maintainer__ = "Ramsey Tantawi"
 __email__ = "ramsey@tantawi.com"
 __status__ = "Production"
 

@@ -13,10 +13,10 @@ import requests
 # Local imports
 from . import files
 
+
 __author__ = "Ramsey Tantawi"
-__maintainer__ = "Ramsey Tantawi"
 __email__ = "ramsey@tantawi.com"
-__status__ = "Experimental"
+__status__ = "Production"
 
 
 NOTION_VERSION = "2022-06-28"
