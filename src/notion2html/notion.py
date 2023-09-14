@@ -553,7 +553,7 @@ def handle_page_special_cases(notion_page):
         for single_property_files in all_files_properties:
             for file_info in single_property_files.get('files', []):
                 url = file_info.get('file', {}).get('url', '')
-                filename = single_property_files.extract_filename_from_url(url)
+                filename = files.extract_filename_from_url(url)
                 handle_attachments(notion_page, 'from_property', url, filename)
 
 
