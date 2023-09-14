@@ -30,7 +30,7 @@ def page_link_text(mentioned_page_id):
 
 
 def attachment_link_text():
-    return f"~~~Attachment:{secrets.token_urlsafe(16)}~~~"
+    return f"~~~Attachment:{secrets.token_urlsafe(10)}~~~"
 
 
 def database_placeholder_text(database_id):
