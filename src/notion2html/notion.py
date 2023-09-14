@@ -341,22 +341,6 @@ def get_from_notion(notion_id, notion_token, file_path=None):
         result._add_database(database)
         logger.debug(f"Added database to result: {database.title} -- {database.id}")
 
-        # Find any and all databases that are embedded in pages.
-        # for page in database.get_all_pages():
-        #     all_databases = page.get_all_databases()
-        #     for db in all_databases:
-        #         result._add_database(db)
-        #         logger.debug(f"Added database to result: {db.title} -- {db.id}")
-
-        # # Get all top-level database pages
-        # top_level_database_pages = []
-        # for db in result._all_databases.values():
-        #     top_level_database_pages.extend(db.get_all_pages())
-
-        # # Flatten and add to all pages
-        # for page in utils.flatten_notion_page_tree(top_level_database_pages):
-        #     result._all_pages[page.id] = page
-
     return result
 
 
