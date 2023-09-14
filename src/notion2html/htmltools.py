@@ -132,7 +132,8 @@ def flatten_blocks_into_html(notion_page, blocks, soup):
         handler = handlers.get(block_type)
 
         if handler is None:
-            raise ValueError(f"Unknown block type: {block_type}! Raising exception.")
+            notion_page.add_error(f"!!!!!!!! Unknown block type! Skipping!!!!!!!: {block_type} -- Raw Block: {block}")
+            continue
 
         # Some block types require additional arguments.
         if block_type in block_types_with_attachments():

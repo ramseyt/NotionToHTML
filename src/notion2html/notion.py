@@ -546,13 +546,20 @@ def handle_page_special_cases(notion_page):
             filename = files.extract_filename_from_url(url)
 
             # full_file_path is a pathlib.Path object, not a string.
-            full_file_path = networking.download_file_and_save(url, filename)
+            try:
+                full_file_path = networking.download_file_and_save(url, filename)
+            except RuntimeError as exc:
+                error_message = (f"Exception downloading attachment. Skipping this attachment. {url} -- {filename} -- {exc}")
+                logger.debug(error_message)
+                notion_page.add_error(error_message)
+                full_file_path = None
 
-            # Get placeholder text and save attachment info on the file object
-            placeholder_text =  htmltools.attachment_link_text()
+            if full_file_path:
+                # Get placeholder text and save attachment info on the file object
+                placeholder_text =  htmltools.attachment_link_text()
 
-            attachment = Attachment(url, block_type, placeholder_text, full_file_path)
-            notion_page.add_attachment(attachment)
+                attachment = Attachment(url, block_type, placeholder_text, full_file_path)
+                notion_page.add_attachment(attachment)
 
 
 def get_subpages_or_subdatabases(notion_page):

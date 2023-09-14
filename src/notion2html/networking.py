@@ -123,7 +123,7 @@ def get_notion_users():
         logger.debug(f"Users returned from Notion: {returned_data}")
 
     except Error403NotAuthorized:
-        logger.debug("The Notion token userd is not authorized to fetch users. User information "
+        logger.debug("The Notion token used is not authorized to fetch users. User information "
                      "capabilities  are required to access Notion users. See "
                      "https://developers.notion.com/reference/capabilities#user-capabilities for "
                      "more information.")
@@ -161,7 +161,7 @@ def download_file_and_save(url, file_name):
         with open(full_file_path, "wb") as f:
             f.write(response.content)
     else:
-        raise ValueError("response is None while trying to write download to a file!")
+        raise RuntimeError("response is None while trying to write download to a file!")
 
     logger.debug((f"Finished file download for: \n"
                   f"url: {url} \n"
