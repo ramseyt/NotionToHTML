@@ -92,7 +92,7 @@ def flatten_notion_page_tree(page_list):
     flat_list = []
     for page in page_list:
         flat_list.append(page)
-        if page.have_subpages():
+        if page.has_subpages():
             flat_list.extend(flatten_notion_page_tree(page.subpages))
 
     deduplicated_pages = list({x.id: x for x in flat_list}.values())

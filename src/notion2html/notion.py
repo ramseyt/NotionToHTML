@@ -34,27 +34,78 @@ class NotionResult:
 
     def __init__(self):
 
-        self.top_level_page = None
-        self.all_pages = {}
-        self.all_databases = {}
-        self.errors = {}
-        self.file_path = ''
+        self._top_level_page = None
+        self._all_pages = {}
+        self._all_databases = {}
+        self._errors = {}
+
+        # This will be a pathlib.Path object, not a string.
+        self._file_path = None
 
 
-    def add_top_level_page(self, page):
+    def _add_page(self, page):
         """page: a NotionPage object."""
-        self.top_level_page = page
-        self.all_pages[page.id] = page
 
-        if page.subpages:
+        # If we already have this page, don't add it again.
+        if page.id in self._all_pages:
+            return
+
+        self._all_pages[page.id] = page
+
+        # Walk the page tree and add all subpages to the list of all pages.
+        if page.has_subpages():
             subpages = utils.flatten_notion_page_tree([page])
             for subpage in subpages:
-                self.all_pages[subpage.id] = subpage
+                self._all_pages[subpage.id] = subpage
 
+        # Walk the list of pages and add all databases to the list of all databases.
+        #
+        # TODO: This doesn't work for databases that are embedded in pages of these databases.
+        for page in list(self._all_pages.values()):
+            if page.has_databases():
+                for database in page.get_all_databases():
+                    self._add_database(database)
 
-    def add_database(self, database):
+    def _add_database(self, database):
         """database: a NotionDatabase object."""
-        self.all_databases[database.id] = database
+        self._all_databases[database.id] = database
+        for page in database.get_all_pages():
+            self._add_page(page)
+
+
+    def _get_databases(self):
+        return list(self._all_databases.values())
+
+
+    def _set_file_path(self, file_path):
+        self._file_path = file_path
+
+
+    def get_pages(self):
+        return list(self._all_pages.values())
+
+
+    def get_errors(self):
+        return list(self._errors.values())
+
+
+    def get_file_path(self):
+        return self._file_path
+
+
+    def get_item_for_id(self, item_id):
+        """Returns a NotionPage object or error for the given id.
+        Specifically does not search databases objects because they are
+        not exposed publicly.
+        """
+
+        if item_id in self._all_pages:
+            return self._all_pages[item_id]
+
+        if item_id in self._errors:
+            return self._errors[item_id]
+
+        raise ValueError(f"Item with id {item_id} not found.")
 
 
 class NotionDatabase:
@@ -98,6 +149,10 @@ class NotionDatabase:
 
         # Regenerate the flat list of all pages everytime new pages are added.
         self.all_pages = utils.flatten_notion_page_tree(self.top_level_pages)
+
+
+    def get_all_pages(self):
+        return self.all_pages
 
 
 class NotionPage:
@@ -157,11 +212,11 @@ class NotionPage:
         return self.blocks_by_id[block_id]
 
 
-    def have_subpages(self):
+    def has_subpages(self):
         return len(self.subpages) != 0
 
 
-    def have_databases(self):
+    def has_databases(self):
         return len(self.databases) != 0
 
 
@@ -203,10 +258,15 @@ class NotionPage:
 
 
     def get_all_databases(self):
-        databases = self.databases
-        for subpage in self.subpages:
-            databases.extend(subpage.get_all_databases())
-        return databases
+
+        # Don't need to get all databases in the database's page tree here; that's
+        # handled elsewhere.
+
+        # for subpage in self.subpages:
+        #     self.databases.extend(subpage.get_all_databases())
+        # return self.databases
+
+        return self.databases
 
 
 class Attachment:
@@ -258,6 +318,7 @@ def get_from_notion(notion_id, notion_token, file_path=None):
     page = None
     database = None
     result = NotionResult()
+    result._set_file_path(files.get_path_to_run_directory())
 
     try:
         page = get_page_with_id(notion_id)
@@ -272,18 +333,29 @@ def get_from_notion(notion_id, notion_token, file_path=None):
     teardown()
 
     if page:
-        result.add_top_level_page(page)
+        result._add_page(page)
         for found_db in page.get_all_databases():
-            result.add_database(found_db)
+            result._add_database(found_db)
 
     if database:
-        result.add_database(database)
+        result._add_database(database)
         logger.debug(f"Added database to result: {database.title} -- {database.id}")
-        for page in database.all_pages:
-            all_databases = page.get_all_databases()
-            for db in all_databases:
-                result.add_database(db)
-                logger.debug(f"Added database to result: {db.title} -- {db.id}")
+
+        # Find any and all databases that are embedded in pages.
+        # for page in database.get_all_pages():
+        #     all_databases = page.get_all_databases()
+        #     for db in all_databases:
+        #         result._add_database(db)
+        #         logger.debug(f"Added database to result: {db.title} -- {db.id}")
+
+        # # Get all top-level database pages
+        # top_level_database_pages = []
+        # for db in result._all_databases.values():
+        #     top_level_database_pages.extend(db.get_all_pages())
+
+        # # Flatten and add to all pages
+        # for page in utils.flatten_notion_page_tree(top_level_database_pages):
+        #     result._all_pages[page.id] = page
 
     return result
 

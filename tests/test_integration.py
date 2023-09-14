@@ -65,12 +65,19 @@ def test_integration(caplog):
 
     try:
         notion_data = notion2html.get_from_notion(notion_database_id, token)
-        for _, db in notion_data.all_databases.items():
+        for _, db in notion_data._all_databases.items():
             logger.debug(f"Database title: {db.title} -- {db.id}")
             for page in db.all_pages:
                 logger.debug(f"Page: {page.title} -- {page.id}")
+
+        logger.debug("\n\n\n\n\n")
+        logger.debug("All Pages!!!!")
+        for page in notion_data.get_pages():
+            logger.debug(f"Page: {page.title} -- {page.id}")
+
     except Exception as exc:
         logger.exception(exc)
+
     finally:
         with logfile.open(mode="a", encoding="utf-8") as log_file:
             log_file.write(caplog.text)
