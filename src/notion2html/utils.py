@@ -66,6 +66,18 @@ def find_url_for_block(block, block_type):
     if url == "" and block_type == "image":
         url = block.get(block_type, {}).get('internal', {}).get('url', '')
 
+    if url == "" and block_type == "audio":
+        url = block.get(block_type, {}).get('external', {}).get('url', '')
+
+    if url == "" and block_type == "audio":
+        url = block.get(block_type, {}).get('file', {}).get('url', '')
+
+    if url == "" and block_type == "video":
+        url = block.get(block_type, {}).get('external', {}).get('url', '')
+
+    if url == "" and block_type == "video":
+        url = block.get(block_type, {}).get('file', {}).get('url', '')
+
     if not url:
         logger.debug(("In a block type that has an attachment but our URL is empty.\n"
                       f"Block type: {block_type} \n"
