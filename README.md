@@ -14,15 +14,17 @@ All content and property types are supported, including attachments.
 
 **Simple to use - just one method call.**
 
-    ```notiontohtml.get_from_notion(notion_id, notion_token)```
+```python
+notiontohtml.get_from_notion(notion_id, notion_token)
+```
 
 You don't need to worry about the distinction between Notion pages and databases. Just pass in a content ID and the library does the rest.
 
 **Attachments are fully supported.**
-All attachments are automatically downloaded.
+  All attachments are automatically downloaded.
 
 **All content and property types are supported.**
-Formatting is preserved as much as possible. For example:
+  Formatting is preserved as much as possible. For example:
 - List items such as bullets are properly indented
 - To-do checked/unchecked state is accurately reflected.
 - All files attached to the page as properies are downloaded, not just files attached to the page itself.
@@ -30,7 +32,7 @@ Formatting is preserved as much as possible. For example:
 **Database pages are downloaded and processed concurrently, speeding up the download process.**
 
 **Each page downloaded returns HTML, a BeautifulSoup object, the raw Notion page blocks and page properties, and more.**
-You can use it as a generic Notion data downloader if you just need access to the raw Notion page data.
+  You can use it as a generic Notion data downloader if you just need access to the raw Notion page data.
 
 
 ## Limitations
@@ -46,7 +48,7 @@ They are instead placeholder strings in a structured format. Callers can easily 
 
 ## Usage
 
-```
+```python
 notion_token = FOO # you got this from Notion above in step YYYY
 content_id = BAR # 32-character identifier you got from Notion in...
 results = notiontohtml.get_from_notion(content_id, notion_token)
@@ -54,7 +56,7 @@ results = notiontohtml.get_from_notion(content_id, notion_token)
 
 ...time passes; downloading many pages, especially many large pages, can take minutes...
 
-```
+```python
 # results is a NotionResult object
 for page in results.get_pages()
     # page is a NotionPage object
