@@ -53,7 +53,16 @@ def convert_to_local(iso_time_str):
 def convert_page_to_html(notion_page):
 
     soup = BeautifulSoup(features="html.parser")
-    soup = extract_page_properties(notion_page, soup)
+    try:
+        soup = extract_page_properties(notion_page, soup)
+    except Exception as exc:
+        error_message = ("Exception hit while constructing property HTML for page. Skipping page.\n"
+                        f"Page: {notion_page}\n"
+                        f"Exception: {exc}\n"
+                        f"Traceback: {traceback.format_exc()}")
+        logger.debug(error_message)
+        notion_page.add_error(error_message)
+        return notion_page
 
     p_tag = soup.new_tag("p")
     soup.append(p_tag)
@@ -61,12 +70,13 @@ def convert_page_to_html(notion_page):
     try:
         soup = flatten_blocks_into_html(notion_page, notion_page.blocks, soup)
     except Exception as exc:
-        error_message = ("Exception hit while constructing HTML for page. Skipping page:\n"
+        error_message = ("Exception hit while constructing page HTML. Skipping page:\n"
                         f"Page: {notion_page}\n"
                         f"Exception: {exc}"
                         f"Traceback: {traceback.format_exc()}")
         logger.debug(error_message)
         notion_page.add_error(error_message)
+        return notion_page
 
     notion_page.add_soup(soup)
     notion_page.add_html(str(soup))
@@ -814,17 +824,17 @@ def _number(property_name, property_value, soup):
 
 
 def _select(property_name, property_value, soup):
+    logger.debug(f"Select (only) property -- Prop Name: {property_name} -- Prop Value: {property_value}")
     select_prop = property_value.get('select', {})
-    select = select_prop.get('name', '')
-
-    if select_prop is None:
+    if select_prop:
+        select = select_prop.get('name', '')
+    else:
         select = ' '
 
     _format_property(property_name, select, soup)
 
 
 def _multi_select(property_name, property_value, soup):
-    # TODO: Validate this works - the join method call looks suspiciously wrong.
     multi_select = ', '.join([option.get('name', '') for option in property_value.get('multi_select', [])])
     logger.debug(f"Multi-Select property -- Prop Name: {property_name} -- Prop Value: {property_value}")
 
