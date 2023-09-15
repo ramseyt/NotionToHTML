@@ -250,6 +250,14 @@ class NotionPage:
         self.attachments[attachment.url] = attachment
 
 
+    def has_attachment(self):
+        return len(self.attachments) != 0
+
+
+    def get_attachments(self):
+        return list(self.attachments.values())
+
+
     def add_tableid_and_rows(self, table_id, table_rows):
         self.tables_and_rows[table_id] = table_rows
 
