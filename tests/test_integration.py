@@ -82,3 +82,5 @@ def test_integration(caplog):
     finally:
         with logfile.open(mode="a", encoding="utf-8") as log_file:
             log_file.write(caplog.text)
+
+    assert "Exception" not in caplog.text
