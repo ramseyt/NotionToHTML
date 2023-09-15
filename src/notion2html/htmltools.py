@@ -52,9 +52,15 @@ def convert_to_local(iso_time_str):
 
 def convert_page_to_html(notion_page):
 
-    soup = BeautifulSoup(features="html.parser")
+    # Base HTML structure with doctype, head, title, and body tags
+    base_html = f"<!DOCTYPE html><html><head><title>{notion_page.title}</title></head><body></body></html>"
+
+    soup = BeautifulSoup(base_html, features="html.parser")
+    body_tag = soup.body
+
     try:
-        soup = extract_page_properties(notion_page, soup)
+        page_soup = extract_page_properties(notion_page, BeautifulSoup(features="html.parser"))
+        body_tag.append(page_soup)
     except Exception as exc:
         error_message = ("Exception hit while constructing property HTML for page. Skipping page.\n"
                         f"Page: {notion_page}\n"
@@ -65,10 +71,11 @@ def convert_page_to_html(notion_page):
         return notion_page
 
     p_tag = soup.new_tag("p")
-    soup.append(p_tag)
+    body_tag.append(p_tag)
 
     try:
-        soup = flatten_blocks_into_html(notion_page, notion_page.blocks, soup)
+        page_soup = flatten_blocks_into_html(notion_page, notion_page.blocks, BeautifulSoup(features="html.parser"))
+        body_tag.append(page_soup)
     except Exception as exc:
         error_message = ("Exception hit while constructing page HTML. Skipping page:\n"
                         f"Page: {notion_page}\n"
