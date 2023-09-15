@@ -298,7 +298,7 @@ class NotionPage:
 
 
     def add_error(self, error):
-        logger.debug(f"LOGGING ERROR!! Page ID: {self.id} -- Title: {self.title} -- Error: {error}")
+        logger.debug(f"ERROR ADDED: Page ID: {self.id} -- Title: {self.title} -- Error: {error}")
         self.errors.append(error)
 
 
