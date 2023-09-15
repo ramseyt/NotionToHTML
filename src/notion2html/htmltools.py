@@ -376,10 +376,25 @@ def _create_list_item_tag(block, soup):
     # Handle formatting for all elements in the "rich_text" list for the item
     item_type = block['type']
     texts = block.get(item_type, {}).get('rich_text', [])
+
+    # If the block type is "to_do", create a checkbox input tag
+    if item_type == "to_do":
+        checkbox = soup.new_tag("input")
+        checkbox["type"] = "checkbox"
+
+        # If there's a 'checked' attribute in the block, set it.
+        # NOTE: This is based on assumption. Modify as necessary if the block structure is different.
+        logger.debug(f"To Do Block: {block}")
+        if block.get(item_type, {}).get('checked', False):
+            checkbox["checked"] = "checked"
+
+        li_tag.append(checkbox)
+
     for text in texts:
         li_tag.append(_handle_formatting(text, soup))
 
     return li_tag
+
 
 
 def _process_child_blocks(block, li_tag, soup, notion_page):
