@@ -2,9 +2,9 @@
 
 NotionToHTML is a Python library for programatically getting your content from Notion and converting it to HTML.
 
-Given it the id to a Notion database and it will fetch all pages in the database as well as ALL sub-pages, mentioned pages, and the full contents of any other databases that it finds.
+Give it the id to a Notion database and it will fetch all pages in the database as well as ALL sub-pages, mentioned pages, and the full contents of any other databases that it finds.
 
-Given it the id to a Notion page and, like for databases, it will automatically fetch its contents and ALL sub-pages, mentioned pages, and the full contents of any other databases that it finds.
+Give it the id to a Notion page and, like for databases, it will automatically fetch its contents and ALL sub-pages, mentioned pages, and the full contents of any other databases that it finds.
 
 All content and property types are supported, including attachments.
 
@@ -12,22 +12,34 @@ All content and property types are supported, including attachments.
 
 ## Features
 
-- Simple to use - just one method call.
-- You don't need to worry about the distinction between Notion pages and databases. Just pass in a content ID and the library does the rest.
-- Attachments are supported. All attachments are automatically downloaded.
-- All content and property types are supported. Formatting is preserved as much as possible. List items such as bullets are properly indented and todo checked/unchecked state is accurately reflected.
-- Database pages are downloaded and processed concurrently, speeding up the download process.
-- For each page downloaded it returns HTML, a BeautifulSoup object, the raw Notion page blocks and page properties, and more.
-    - So it can also be used as a generic Notion data downloader if you just need access to the raw Notion page data.
+**Simple to use - just one method call.**
+
+    ```notiontohtml.get_from_notion(notion_id, notion_token)```
+
+You don't need to worry about the distinction between Notion pages and databases. Just pass in a content ID and the library does the rest.
+
+**Attachments are fully supported.**
+All attachments are automatically downloaded.
+
+**All content and property types are supported.**
+Formatting is preserved as much as possible. For example:
+- List items such as bullets are properly indented
+- To-do checked/unchecked state is accurately reflected.
+- All files attached to the page as properies are downloaded, not just files attached to the page itself.
+
+**Database pages are downloaded and processed concurrently, speeding up the download process.**
+
+**Each page downloaded returns HTML, a BeautifulSoup object, the raw Notion page blocks and page properties, and more.**
+You can use it as a generic Notion data downloader if you just need access to the raw Notion page data.
+
 
 ## Limitations
 
-**A flat list of all pages found is returned to the caller; page hierarchy isn't preserved.**
-- Due to Notion API limitations it's not possible to tell the difference between a subpage and a mention of a page that's not a subpage. This makes it impossible for any hierarchy to be exactly right and it's probably the worst of all cases to be subtly wrong.
+**A flat list of all pages found is returned to the caller. Page hierarchy isn't preserved.**
+Due to Notion API limitations it's not possible to tell the difference between a subpage and a mention of a page that's not a subpage. This makes it impossible for any hierarchy to be exactly right; and it's probably the worst of all cases to be subtly wrong. So instead the library returns a flat list of all pages found, and it's up to the caller to structure the pages as they see fit.
 
 **Links to attachments, other downloaded Notion pages, and other Notion databases are not HTML links.**
-
-They are instead placeholder strings in a structured format containing the ids of the objects they refer to. Callers can easily do a find and replace to replace these placeholders with HTML as needed; the intent is to allow callers to programatically structure downloaded content into any directory structure you want. Of course all other links *are* preserved in the returned HTML as-is.
+They are instead placeholder strings in a structured format. Callers can easily look up the objects these placeholders refer to. The intent is for callers to do a find and replace to replace these placeholders with HTML as needed, which allows you to programatically structure downloaded content into any directory structure you want. Of course all other links *are* preserved in the returned HTML as-is.
 
 
 ## Installation
