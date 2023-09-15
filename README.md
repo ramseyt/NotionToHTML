@@ -12,36 +12,23 @@ All content and property types are supported, including attachments.
 
 ## Features
 
-**Simple to use - just one method call.**
-
-```python
-notiontohtml.get_from_notion(notion_id, notion_token)
-```
-
-You don't need to worry about the distinction between Notion pages and databases. Just pass in a content ID and the library does the rest.
-
-**Attachments are fully supported.**
-  All attachments are automatically downloaded.
-
-**All content and property types are supported.**
-  Formatting is preserved as much as possible. For example:
-- List items such as bullets are properly indented
-- To-do checked/unchecked state is accurately reflected.
-- All files attached to the page as properies are downloaded, not just files attached to the page itself.
-
-**Database pages are downloaded and processed concurrently, speeding up the download process.**
-
-**Each page downloaded returns HTML, a BeautifulSoup object, the raw Notion page blocks and page properties, and more.**
-  You can use it as a generic Notion data downloader if you just need access to the raw Notion page data.
+- Simple to use - just one method call.
+- Attachments are fully supported and are downloaded automatically.
+- All content and property types are supported. Formatting is preserved as much as possible. For example:
+    - List items such as bullets are properly indented
+    - To-do checked/unchecked state is accurately reflected.
+    - All files attached to the page as properies are downloaded, not just files attached to the page itself.
+- Database pages are downloaded and processed concurrently, speeding up the download process.
+- Each page downloaded returns HTML, a BeautifulSoup object, the raw Notion page blocks and page properties, and more.
+    - You can use it as a generic Notion data downloader if you just need access to the raw Notion page data.
 
 
 ## Limitations
 
-**A flat list of all pages found is returned to the caller. Page hierarchy isn't preserved.**
-Due to Notion API limitations it's not possible to tell the difference between a subpage and a mention of a page that's not a subpage. This makes it impossible for any hierarchy to be exactly right; and it's probably the worst of all cases to be subtly wrong. So instead the library returns a flat list of all pages found, and it's up to the caller to structure the pages as they see fit.
-
-**Links to attachments, other downloaded Notion pages, and other Notion databases are not HTML links.**
-They are instead placeholder strings in a structured format. Callers can easily look up the objects these placeholders refer to. The intent is for callers to do a find and replace to replace these placeholders with HTML as needed, which allows you to programatically structure downloaded content into any directory structure you want. Of course all other links *are* preserved in the returned HTML as-is.
+- A flat list of all pages found is returned to the caller. Page hierarchy isn't preserved.
+    -Due to Notion API limitations it's not possible to tell the difference between a subpage and a mention of a page that's not a subpage. This makes it impossible for any hierarchy to be exactly right; and it's probably the worst of all cases to be subtly wrong. So instead the library returns a flat list of all pages found, and it's up to the caller to structure the pages as they see fit.
+- Links to attachments, other downloaded Notion pages, and other Notion databases are not HTML links.
+    - They are instead placeholder strings in a structured format. Callers can easily look up the objects these placeholders refer to. The intent is for callers to do a find and replace to replace these placeholders with HTML as needed, which allows you to programatically structure downloaded content into any directory structure you want. Of course all other links *are* preserved in the returned HTML as-is.
 
 
 ## Installation
@@ -49,8 +36,8 @@ They are instead placeholder strings in a structured format. Callers can easily 
 ## Usage
 
 ```python
-notion_token = FOO # you got this from Notion above in step YYYY
-content_id = BAR # 32-character identifier you got from Notion in...
+notion_token = foo # you got this from Notion above in step YYYY
+content_id = bar # 32-character identifier you got from Notion in...
 results = notiontohtml.get_from_notion(content_id, notion_token)
 ```
 
@@ -64,7 +51,7 @@ for page in results.get_pages()
     page.html # page contents converted to HTML
 
 # I have the ID of a specific page that I want
-page_id = BAZ
+page_id = baz
 page = results.get_item_for_id(page_id)
 
 # Does this page have attachments? If so give me the full paths to all.
