@@ -788,67 +788,47 @@ def extract_page_properties(notion_page, soup):
 
 
 def _title(_, __, ___):
-    # We don't need a title property because we already have the page title.
-    # So pass, but keep the commented-out code here just in case.
-    #
-    # title = ' '.join([text.get('plain_text', '') for text in prop.get('title', [])])
-    # p_tag = soup.new_tag("p")
-    # b_tag = soup.new_tag("b")
-    # b_tag.string = "Title: "
-    # p_tag.append(b_tag)
-    # p_tag.append(f"{title}")
-    # soup.append(p_tag)
-
+    # We don't need a title property because we already have the page title. So pass.
     pass
 
 
 def _rich_text(property_name, property_value, soup):
-    rich_text = ' '.join([text.get('plain_text', '') for text in property_value.get('rich_text', [])])
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append(rich_text)
+
+    rich_text = property_value.get('rich_text', [])
+    for text in rich_text:
+        p_tag.append(_handle_formatting(text, soup))
+
     soup.append(p_tag)
 
 
 def _number(property_name, property_value, soup):
-    number = property_value.get('number', '')
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
+    number = str(property_value.get('number', ''))
+    if number is None:
+        number = ' '
 
-    if number:
-        p_tag.append(str(number))
-    else:
-        p_tag.append("")
-
-    soup.append(p_tag)
+    _format_property(property_name, number, soup)
 
 
 def _select(property_name, property_value, soup):
     select_prop = property_value.get('select', {})
-    if select_prop is not None:
-        select = select_prop.get('name', '')
+    select = select_prop.get('name', '')
 
-        p_tag = soup.new_tag("p")
-        b_tag = soup.new_tag("b")
-        b_tag.string = f"{property_name}: "
-        p_tag.append(b_tag)
-        p_tag.append(select)
-        soup.append(p_tag)
+    if select_prop is None:
+        select = ' '
+
+    _format_property(property_name, select, soup)
 
 
 def _multi_select(property_name, property_value, soup):
+    # TODO: Validate this works - the join method call looks suspiciously wrong.
     multi_select = ', '.join([option.get('name', '') for option in property_value.get('multi_select', [])])
+    logger.debug(f"Multi-Select property -- Prop Name: {property_name} -- Prop Value: {property_value}")
 
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(multi_select)
-    soup.append(p_tag)
+    _format_property(property_name, multi_select, soup)
 
 
 def _date(property_name, property_value, soup):
@@ -859,34 +839,16 @@ def _date(property_name, property_value, soup):
         end_date = date.get('end', '')
 
         if start_date and end_date:
-            p_tag = soup.new_tag("p")
-            b_tag = soup.new_tag("b")
-            b_tag.string = f"{property_name}: "
-            p_tag.append(b_tag)
-            p_tag.append(f"{start_date} to {end_date}")
-            soup.append(p_tag)
+            _format_property(property_name, f"{start_date} to {end_date}", soup)
 
         elif start_date:
-            p_tag = soup.new_tag("p")
-            b_tag = soup.new_tag("b")
-            b_tag.string = f"{property_name}: "
-            p_tag.append(b_tag)
-            p_tag.append(start_date)
-            soup.append(p_tag)
+            _format_property(property_name, start_date, soup)
 
         else:
-            p_tag = soup.new_tag("p")
-            b_tag = soup.new_tag("b")
-            b_tag.string = f"{property_name}: "
-            p_tag.append(b_tag)
-            soup.append(p_tag)
+            _format_property(property_name, " ", soup)
 
     else:
-        p_tag = soup.new_tag("p")
-        b_tag = soup.new_tag("b")
-        b_tag.string = f"{property_name}: "
-        p_tag.append(b_tag)
-        soup.append(p_tag)
+        _format_property(property_name, " ", soup)
 
 
 def _files(property_name, property_value, soup, notion_page):
@@ -900,33 +862,17 @@ def _files(property_name, property_value, soup, notion_page):
         placeholder_text += f"{notion_page.get_placeholder_text_for_url(file_url)}, "
 
     placeholder_text = placeholder_text.rstrip(', ')
-
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(placeholder_text)
-    soup.append(p_tag)
+    _format_property(property_name, placeholder_text, soup)
 
 
 def _checkbox(property_name, property_value, soup):
     checkbox = property_value.get('checkbox', '')
 
     if checkbox:
-        p_tag = soup.new_tag("p")
-        b_tag = soup.new_tag("b")
-        b_tag.string = f"{property_name}: "
-        p_tag.append(b_tag)
-        p_tag.append("Checked")
-        soup.append(p_tag)
+        _format_property(property_name, "Checked", soup)
 
     else:
-        p_tag = soup.new_tag("p")
-        b_tag = soup.new_tag("b")
-        b_tag.string = f"{property_name}: "
-        p_tag.append(b_tag)
-        p_tag.append("Unchecked")
-        soup.append(p_tag)
+        _format_property(property_name, "Unchecked", soup)
 
 
 def _url(property_name, property_value, soup):
@@ -968,12 +914,7 @@ def _phone_number(property_name, property_value, soup):
     if phone_number is None:
         phone_number = ' '
 
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(phone_number)
-    soup.append(p_tag)
+    _format_property(property_name, phone_number, soup)
 
 
 def _created_time(property_name, property_value, soup):
@@ -983,12 +924,7 @@ def _created_time(property_name, property_value, soup):
     else:
         created_time = convert_to_local(created_time_raw).strftime('%Y-%m-%d %H:%M:%S')
 
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(created_time)
-    soup.append(p_tag)
+    _format_property(property_name, created_time, soup)
 
 
 def _last_edited_time(property_name, property_value, soup):
@@ -998,12 +934,7 @@ def _last_edited_time(property_name, property_value, soup):
     else:
         last_edited_time = convert_to_local(last_edited_time_raw).strftime('%Y-%m-%d %H:%M:%S')
 
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(last_edited_time)
-    soup.append(p_tag)
+    _format_property(property_name, last_edited_time, soup)
 
 
 def _formula(property_name, property_value, soup):
@@ -1012,13 +943,9 @@ def _formula(property_name, property_value, soup):
     formula_result = property_value.get('formula', {}).get(formula_type, '')
     if formula_result is None:
         formula_result = ' '
+    formula_result = str(formula_result)
 
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(str(formula_result))
-    soup.append(p_tag)
+    _format_property(property_name, formula_result, soup)
 
 
 def _relation(property_name, property_value, soup):
@@ -1028,15 +955,10 @@ def _relation(property_name, property_value, soup):
     if relation_values is None:
         relation_values = []
     ids = [x.get('id', '') for x in relation_values]
+
     relation = str(ids).lstrip('[').rstrip(']').replace('\'', '').replace(' ', '')
     logger.debug(f"Relation value: {relation}")
-
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(relation)
-    soup.append(p_tag)
+    _format_property(property_name, relation, soup)
 
 
 # As of 2023-09-12 the API documentation for rollup type is here, but I think
@@ -1045,26 +967,20 @@ def _relation(property_name, property_value, soup):
 def _rollup(property_name, property_value, soup):
     logger.debug(f"Rollup property -- Prop Name: {property_name} -- Prop Value: {property_value}")
     rollup_type = property_value.get('rollup', {}).get('type', '')
-    rollup_value = str(property_value.get('rollup', {}).get(rollup_type, ''))
 
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(rollup_value)
-    soup.append(p_tag)
+    rollup_value = str(property_value.get('rollup', {}).get(rollup_type, ''))
+    logger.debug(f"Rollup value: {rollup_value}")
+    _format_property(property_name, rollup_value, soup)
 
 
 def _status(property_name, property_value, soup):
     logger.debug(f"Status property -- Prop Name: {property_name} -- Prop Value: {property_value}")
     status_text = property_value.get('status', {}).get('name', '')
+    if status_text is None:
+        status_text = ' '
 
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(str(status_text))
-    soup.append(p_tag)
+    status_text = str(status_text)
+    _format_property(property_name, status_text, soup)
 
 
 def _unique_id(property_name, property_value, soup):
@@ -1074,15 +990,9 @@ def _unique_id(property_name, property_value, soup):
         prefix = ''
 
     number = property_value.get('unique_id', {}).get('number', '')
-
     unique_id = f"{prefix}{number}"
 
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(str(unique_id))
-    soup.append(p_tag)
+    _format_property(property_name, unique_id, soup)
 
 
 def _people(property_name, property_value, soup, notion_page):
@@ -1106,13 +1016,7 @@ def _people(property_name, property_value, soup, notion_page):
             all_people_names += f"{username}, "
 
     all_people_names = all_people_names.rstrip(', ')
-
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(all_people_names)
-    soup.append(p_tag)
+    _format_property(property_name, all_people_names, soup)
 
 
 def _created_by(property_name, property_value, soup, notion_page):
@@ -1129,12 +1033,7 @@ def _created_by(property_name, property_value, soup, notion_page):
                                 "more information. Using user ID instead.")
         username = user_id
 
-    p_tag = soup.new_tag("p")
-    b_tag = soup.new_tag("b")
-    b_tag.string = f"{property_name}: "
-    p_tag.append(b_tag)
-    p_tag.append(username)
-    soup.append(p_tag)
+    _format_property(property_name, username, soup)
 
 
 def _last_edited_by(property_name, property_value, soup, notion_page):
@@ -1151,9 +1050,13 @@ def _last_edited_by(property_name, property_value, soup, notion_page):
                                 "more information. Using user ID instead.")
         username = user_id
 
+    _format_property(property_name, username, soup)
+
+
+def _format_property(property_name, property_value, soup):
     p_tag = soup.new_tag("p")
     b_tag = soup.new_tag("b")
     b_tag.string = f"{property_name}: "
     p_tag.append(b_tag)
-    p_tag.append(username)
+    p_tag.append(str(property_value))
     soup.append(p_tag)
