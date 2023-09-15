@@ -448,24 +448,13 @@ def _process_parent_block(block, li_tag, soup, notion_page):
 ######## End handling of List items
 
 
-# def _to_do(block, soup):
-#     texts = block.get('to_do', {}).get('rich_text', [])
-#     checked = block.get('to_do', {}).get('checked', False)
-
-#     input_tag = soup.new_tag("input", type='checkbox')
-#     if checked:
-#         input_tag['checked'] = 'checked'
-#     soup.append(input_tag)
-
-#     label_tag = soup.new_tag("label")
-#     for text in texts:
-#         label_tag.append(_handle_formatting(text, soup))
-
-#     soup.append(label_tag)
-#     soup.new_tag("br")
-
-
 def _toggle(block, soup):
+    # Unfortunately the toggle block doesn't include the content that's actually inside
+    # the toggle. Nor does it include any pointers to the blocks that are inside the toggle.
+    # So just create the toggle with the title. Content blocks will appear immediately after
+    # the toggle but I think that's the best we can do without any more information?
+
+    logger.debug(f"Toggle block: {block}")
     texts = block.get('toggle', {}).get('rich_text', [])
 
     details_tag = soup.new_tag("details")
