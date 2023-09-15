@@ -324,7 +324,6 @@ def _paragraph(block, soup):
 
     # Append the paragraph tag and a line break to the soup object
     soup.append(para_tag)
-    soup.append(soup.new_tag("br"))
 
 
 def _heading_1(block, soup):
