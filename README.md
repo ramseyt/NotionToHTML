@@ -12,7 +12,7 @@ All content and property types are supported, including attachments.
 
 ## Features
 
-- Simple to use - just one method call.
+- Easy to use. You don't need to know anything about Notion's API to use it.
 - Attachments are fully supported and are downloaded automatically.
 - All content and property types are supported. Formatting is preserved as much as possible. For example:
     - List items such as bullets are properly indented

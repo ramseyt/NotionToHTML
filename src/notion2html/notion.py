@@ -537,9 +537,9 @@ def handle_page_special_cases(notion_page):
 
         # Handle column blocks. Once we get them we need to put them into the list
         # of blocks in the proper order.
-        if block_type == 'column_list':
-            column_blocks = get_column_blocks(block)
-            notion_page.blocks = notion_page.blocks[:i] + column_blocks + notion_page.blocks[i:]
+        # if block_type == 'column_list':
+        #     column_blocks = get_column_blocks(block)
+        #     notion_page.blocks = notion_page.blocks[:i] + column_blocks + notion_page.blocks[i:]
 
         # Handle databases embedded in the page content.
         if block_type == "child_database":
@@ -678,6 +678,7 @@ def get_column_blocks(block):
 
     # Get the column children
     column_list_blocks = networking.fetch_all_blocks(column_list_block_id)
+
     for column in column_list_blocks:
         column_id = column.get('id', '')
         column_blocks = networking.fetch_all_blocks(column_id)
