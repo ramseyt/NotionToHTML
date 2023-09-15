@@ -41,14 +41,6 @@ def create_log():
     return test_log_file
 
 
-def func(x):
-    return x + 1
-
-
-def test_answer():
-    assert func(4) == 5
-
-
 def test_integration(caplog):
 
     caplog.set_level(logging.DEBUG, logger="notion2html")
@@ -73,10 +65,16 @@ def test_integration(caplog):
         logger.debug("\n\n\n\n\n")
         logger.debug("All Pages!!!!")
         for page in notion_data.get_pages():
+
             logger.debug(f"Page: {page.title} -- {page.id}")
             if page.has_errors():
                 for error in page.get_errors():
                     logger.debug(f"Error: {error}")
+
+            # Write out the html to a file
+            html_file_full_path = logfile.parent.joinpath(f"{page.id}.html")
+            with html_file_full_path.open(mode="w", encoding="utf-8") as html_file:
+                html_file.write(page.html)
 
     except Exception as exc:
         logger.exception(exc)
