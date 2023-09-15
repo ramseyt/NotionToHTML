@@ -171,10 +171,9 @@ def _handle_formatting(text, soup):
         new_tag = _handle_annotations_format(text, soup)
 
     new_tag = _handle_link_format(text, soup, new_tag)
-
     new_tag = _handle_page_mention(text, soup, new_tag)
-
     new_tag = _handle_date_mention(text, soup, new_tag)
+    new_tag = _handle_person_mention(text, soup, new_tag)
 
     return new_tag
 
@@ -278,6 +277,22 @@ def _process_page_mention(text, soup, new_tag):
         new_tag = temp_tag
     else:
         new_tag = temp_tag
+
+    return new_tag
+
+
+def _handle_person_mention(text, soup, new_tag):
+    mention_type = text.get('mention', {}).get('type', '')
+
+    if mention_type and mention_type == 'user':
+        user_name = text.get('plain_text', '')
+
+        temp_tag = soup.new_string(user_name)
+        if new_tag:
+            temp_tag.append(new_tag)
+            new_tag = temp_tag
+        else:
+            new_tag = temp_tag
 
     return new_tag
 
