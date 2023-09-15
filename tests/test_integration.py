@@ -84,3 +84,7 @@ def test_integration(caplog):
             log_file.write(caplog.text)
 
     assert "Exception" not in caplog.text
+    assert "exception" not in caplog.text
+    assert "ERROR" not in caplog.text
+    assert "Error" not in caplog.text
+    assert "ERROR ADDED:" not in caplog.text
