@@ -768,15 +768,6 @@ def extract_page_properties(notion_page, soup):
         'unique_id': _unique_id
     }
 
-    # Start with the parent page title, if there is one.
-    if notion_page.parent_page_title:
-        p_tag = soup.new_tag("p")
-        b_tag = soup.new_tag("b")
-        b_tag.string = "Parent page: "
-        p_tag.append(b_tag)
-        p_tag.append(f"{notion_page.parent_page_title}")
-        soup.append(p_tag)
-
     # These are the properties we're interested in.
     properties = notion_page.properties.get('properties', {})
 
