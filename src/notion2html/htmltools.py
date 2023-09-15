@@ -695,49 +695,74 @@ def _pass_handler(_, __):
 ######## Block types with attachments below
 
 def _file(block, soup, notion_page):
-    file_url = block.get('file', {}).get('file', {}).get('url', '')
+    url_type = block.get('file', {}).get('type', '')
+    file_url = block.get('file', {}).get(url_type, {}).get('url', '')
 
-    file_placeholder_text = NavigableString(notion_page.get_placeholder_text_for_url(file_url))
-    soup.append(file_placeholder_text)
+    if url_type == 'external':
+        new_tag = soup.new_tag("a", href=file_url)
+        new_tag.string = file_url
+
+    else:
+        new_tag = NavigableString(notion_page.get_placeholder_text_for_url(file_url))
+
+    soup.append(new_tag)
 
 
 def _pdf(block, soup, notion_page):
-    pdf_url = block.get('pdf', {}).get('file', {}).get('url', '')
+    url_type = block.get('pdf', {}).get('type', '')
+    pdf_url = block.get('pdf', {}).get(url_type, {}).get('url', '')
 
-    pdf_placeholder_text = NavigableString(notion_page.get_placeholder_text_for_url(pdf_url))
-    soup.append(pdf_placeholder_text)
+    if url_type == 'external':
+        new_tag = soup.new_tag("a", href=pdf_url)
+        new_tag.string = pdf_url
+
+    else:
+        new_tag = NavigableString(notion_page.get_placeholder_text_for_url(pdf_url))
+
+    soup.append(new_tag)
 
 
 def _image(block, soup, notion_page):
-    # Image URL can be in one of many places. Check them in sequence.
-    image_url = block.get('image', {}).get('external', {}).get('url', '') or \
-                block.get('image', {}).get('internal', {}).get('url', '') or \
-                block.get('image', {}).get('file', {}).get('url', '')
+    url_type = block.get('image', {}).get('type', '')
+    image_url = block.get('image', {}).get(url_type, {}).get('url', '')
 
-    try:
-        image_placeholder_text = NavigableString(notion_page.get_placeholder_text_for_url(image_url))
-    except Exception:
-        notion_page.add_error("Exception while trying to get placeholder text for image. "
-                              f"Detected image URL: {image_url} "
-                              f"Image URLs on page object: {notion_page.attachments.keys()} "
-                              f"Block: {block}")
-        image_placeholder_text = NavigableString('')
+    if url_type == 'external':
+        new_tag = soup.new_tag('img', src=image_url)
 
-    soup.append(image_placeholder_text)
+    else:
+        new_tag = NavigableString(notion_page.get_placeholder_text_for_url(image_url))
+
+    soup.append(new_tag)
 
 
 def _video(block, soup, notion_page):
-    url = block.get('video', {}).get('file', {}).get('url', '')
-    # new_tag = soup.new_tag("video", src=notion_page.get_placeholder_text_for_url(url))
-    placeholder_text = NavigableString(notion_page.get_placeholder_text_for_url(url))
-    soup.append(placeholder_text)
+    url_type = block.get('video', {}).get('type', '')
+    url = block.get('video', {}).get(url_type, {}).get('url', '')
+
+
+    if url_type == 'external':
+        # Embedding video is weird and platform-specific. Just link instead.
+        new_tag = soup.new_tag("a", href=url)
+        new_tag.string = url
+    else:
+        new_tag = NavigableString(notion_page.get_placeholder_text_for_url(url))
+
+    soup.append(new_tag)
 
 
 def _audio(block, soup, notion_page):
-    url = block.get('audio', {}).get('file', {}).get('url', '')
-    # new_tag = soup.new_tag("audio", src=notion_page.get_placeholder_text_for_url(url))
-    placeholder_text = NavigableString(notion_page.get_placeholder_text_for_url(url))
-    soup.append(placeholder_text)
+    url_type = block.get('audio', {}).get('type', '')
+    url = block.get('audio', {}).get(url_type, {}).get('url', '')
+
+    if url_type == 'external':
+        audio_tag = soup.new_tag('audio', controls=True)
+        source_tag = soup.new_tag('source', src=url, type="audio/mpeg")
+        audio_tag.append(source_tag)
+        audio_tag.string = "Your browser does not support the audio element."
+    else:
+        audio_tag = NavigableString(notion_page.get_placeholder_text_for_url(url))
+
+    soup.append(audio_tag)
 
 
 ########################### Extract Properties

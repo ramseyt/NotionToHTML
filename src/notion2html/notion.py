@@ -548,9 +548,14 @@ def handle_page_special_cases(notion_page):
 
         # Handle attachments.
         if block_type in blocks_with_attachments:
-            url = utils.find_url_for_block(block, block_type)
-            filename = files.extract_filename_from_url(url)
-            handle_attachments(notion_page, block_type, url, filename)
+            attachment_type = block.get(block_type, {}).get('type', '')
+
+            # Only to download and handle Notion-hosted attachments. External "attachments" are
+            # really just embedded links and they will be handled as such in HTML processing.
+            if attachment_type == 'file':
+                url = utils.find_url_for_block(block, block_type)
+                filename = files.extract_filename_from_url(url)
+                handle_attachments(notion_page, block_type, url, filename)
 
     # Handle attachments in properties
     all_files_properties = htmltools.extract_files_properties_only(notion_page)
@@ -570,7 +575,7 @@ def handle_attachments(notion_page, block_type, url, filename):
     try:
         full_file_path = networking.download_file_and_save(url, filename)
     except RuntimeError as exc:
-        error_message = (f"Exception downloading attachment. Skipping this attachment. {url} -- {filename} -- {exc}")
+        error_message = (f"Exception downloading attachment. Skipping this attachment. {url} -- {filename} -- {exc} -- {traceback.format_exc()}")
         logger.debug(error_message)
         notion_page.add_error(error_message)
         full_file_path = None
