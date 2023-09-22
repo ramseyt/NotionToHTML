@@ -367,9 +367,11 @@ def _handle_response(response, file_download=False):
             if data is None:
                 return None, True
 
-        except Exception as e:
-            logger.debug("Exception while parsing JSON! Retrying...")
-            logger.debug(str(e))
+        except Exception as exc:
+            logger.debug(("Exception while parsing JSON! Attempting retry...\n"
+                          f"Exception: {str(exc)} \n"
+                          f"Traceback: {traceback.format_exc()} \n"
+                          "Retrying..."))
             return None, True
 
     # Handle various errors
