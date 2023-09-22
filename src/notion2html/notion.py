@@ -4,7 +4,12 @@
 
 # Standard library imports
 import concurrent.futures
+import copy
 import logging
+import pathlib
+import re
+import secrets
+import shutil
 import traceback
 
 # External module imports
@@ -159,35 +164,46 @@ class NotionPage:
     """
 
     def __init__(self, page_id):
+
+        ##### Page data
         self.id = page_id
         self.title = ""
         self.blocks = []
 
-        # Dict that is decoded JSON of the full page properties object
-        # we got from Notion.
+        # Dict that is decoded JSON of the full page properties object from Notion.
         self.properties = {}
 
         # Dict - keys are block ids as strings, value is the entire block JSON.
         self.blocks_by_id = {}
 
+        # Dict - key is the block id of table block, value is a list of table row blocks
+        self.tables_and_rows = {}
+
+        self.errors = []
+
+        ##### Parent pages and Sub pages
         self.subpages = []
         self.subpage_ids = []
         self.parent_page_title = ""
         self.parent_page_id = ""
-        self.soup = None
-        self.html = ""
-        self.errors = []
 
+        ##### HTML related
+        self.soup = None
+        self.original_html = ""
+        self.updated_html = ""
+
+        # Dict - key is the page id, value is the placeholder text for the page link.
+        self.page_links = {}
+
+        ##### Attachments
         # Dict - key is the full attachment URL, value is an Attachment object.
         self.attachments = {}
 
-        # Dict - key is the block id of the table block, value is a list of table row blocks
-        # for that table.
-        self.tables_and_rows = {}
-
+        ##### Databases
         # List of NotionDatabase objects that are embedded in the page content.
         self.databases = []
 
+        ##### Users
         # All possible users who could be mentioned in this page.
         self.all_users = networking.USERS_FROM_NOTION
 
@@ -238,8 +254,68 @@ class NotionPage:
         self.parent_page_id = parent_page_id
 
 
-    def add_html(self, html):
-        self.html += html
+    def set_html(self, html):
+        self.original_html = html
+
+        # Find all page link placeholders
+        pattern = r'~~~PageMention:::([A-Za-z0-9-]+):::(.+?)~~~'
+        matches = re.finditer(pattern, html)
+        self.page_links = {match.group(1): match.group(0) for match in matches}
+
+        self.updated_html = copy.copy(html)
+
+
+    def get_original_html(self):
+        return self.original_html
+
+
+    def get_updated_html(self):
+        return self.updated_html
+
+
+    def set_all_link_paths(self, path):
+        """path: a string representing the relative path that html pages
+        will live in.
+        """
+
+        if self.page_links:
+            # Replace all page link placeholders with the correct link.
+            for page_id, placeholder_text in self.page_links.items():
+
+                link_path = f"{path}{page_id}.html"
+                link_text = placeholder_text.split(":::")[2].rstrip("~~~")
+
+                page_link_replacement_html = htmltools.create_link_text(link_path, link_text)
+                self.updated_html = self.updated_html.replace(placeholder_text, page_link_replacement_html)
+
+
+    def set_attachment_paths_and_copy(self, link_path, directory_path):
+
+        if self.attachments:
+            for attachment in self.attachments.values():
+                filename = attachment.path.name
+                attachment_directory_name = secrets.token_urlsafe(10)
+
+                full_link_path = f"{link_path}/{attachment_directory_name}/{filename}"
+                copy_destination_directory = pathlib.Path(directory_path).joinpath(attachment_directory_name)
+                copy_destination_directory.mkdir(exist_ok=False, parents=True)
+
+                # Create new link tags and update all references in the HTML
+                attachment_link_replacement_html = htmltools.create_link_text(full_link_path, filename)
+                self.updated_html = self.updated_html.replace(attachment.placeholder_text,
+                                                              attachment_link_replacement_html)
+
+                # Copy the attachment to the new directory
+                shutil.copy(attachment.path, copy_destination_directory)
+
+
+    def copy_all_attachments_to_path(self, directory):
+        """directory: a pathlib.Path object, not a string."""
+
+        logger.debug(f"Copying attachments to directory: {directory}")
+        if self.attachments:
+            for attachment in self.get_attachments():
+                files.copy_file(attachment.path, directory)
 
 
     def add_soup(self, soup):

@@ -24,16 +24,17 @@ logger.setLevel(logging.WARNING)
 
 ########################### Formatting
 
-def page_link_text(mentioned_page_id):
-    return f"~~~Link:{mentioned_page_id}~~~"
+def page_link_text(page_title, page_id):
+    """The regular expressions in method add_html() on NotionPage MUST be updated if this text is changed."""
+    return f"~~~PageMention:::{page_id}:::{page_title}~~~"
 
 
 def attachment_link_text():
     return f"~~~Attachment:{secrets.token_urlsafe(10)}~~~"
 
 
-def database_placeholder_text(database_id):
-    return f"~~~Database:{database_id}~~~"
+def database_placeholder_text(database_placeholder):
+    return f"~~~Embedded Database was here: {database_placeholder}~~~"
 
 
 def block_types_with_attachments():
@@ -48,12 +49,22 @@ def convert_to_local(iso_time_str):
     local_time = utc_time.astimezone()
     return local_time
 
+
+def create_link_text(link_url, link_text):
+    """Creates a link tag with the given URL and text.
+    """
+
+    link_tag = BeautifulSoup(features="html.parser").new_tag("a", href=link_url)
+    link_tag.string = link_text
+    return str(link_tag)
+
+
 ########################### Converting Notion page data to html
 
 def convert_page_to_html(notion_page):
 
     # Base HTML structure with doctype, head, title, and body tags
-    base_html = f"<!DOCTYPE html><html><head><title>{notion_page.title}</title></head><body></body></html>"
+    base_html = f"<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>{notion_page.title}</title></head><body></body></html>"
 
     soup = BeautifulSoup(base_html, features="html.parser")
     body_tag = soup.body
@@ -86,7 +97,7 @@ def convert_page_to_html(notion_page):
         return notion_page
 
     notion_page.add_soup(soup)
-    notion_page.add_html(str(soup))
+    notion_page.set_html(str(soup))
 
     return notion_page
 
@@ -251,7 +262,7 @@ def _process_date_mention(text, soup, new_tag):
 
 
 def _process_page_mention(text, soup, new_tag):
-    # page_title = text.get('plain_text')
+    title_of_mentioned_page = text.get('plain_text')
     id_of_mentioned_page = text.get('mention', {}).get('page', {}).get('id', '')
 
     # There's a bug in Notion's API where page titles for page mentions
@@ -277,7 +288,7 @@ def _process_page_mention(text, soup, new_tag):
     # If we don't hit the bug above then it's straightforward, just use
     # the page title returned by the API.
     logger.debug(f"Page mention text: {text}")
-    temp_tag = soup.new_string(page_link_text(id_of_mentioned_page))
+    temp_tag = soup.new_string(page_link_text(title_of_mentioned_page, id_of_mentioned_page))
 
     if new_tag:
         temp_tag.append(new_tag)
@@ -490,20 +501,14 @@ def _toggle(block, soup):
 
 
 def _child_page(block, soup, notion_page):
-    """The current handling ot child_page blocks here is wrong, in that we need the id of the
-    child page as the link text, not the title. But the Notion API documentation isn't clear
-    on how to get the child page ID, and searching through dev logs I don't think I've actually
-    ever seen an instance of a child page block in the wild. So, leave as is for now."""
 
     logger.debug(f"!!!!! Child page block found: {block}")
-    notion_page.add_error("Found a child page block. This probably isn't being handled right. "
-                          "Please create a GitHub issue and include this block information if "
-                          f"you can share it: {block}")
 
+    page_id = block.get('id', '')
     page_title = block.get('child_page', {}).get('title', '')
 
     new_tag = soup.new_tag("p")
-    new_tag.string = page_link_text(page_title)
+    new_tag.string = page_link_text(page_title, page_id)
     soup.append(new_tag)
 
 
@@ -677,11 +682,12 @@ def _child_database(block, soup):
     # Create a new paragraph tag
     para_tag = soup.new_tag("p")
 
-    # Get database name
-    database_id = block.get('id', '')
+    # Get database name and title
+    # database_id = block.get('id', '')
+    database_title = block.get('child_database', {}).get('title', '')
 
     # Append database name
-    text = soup.new_string(database_placeholder_text(database_id))
+    text = soup.new_string(database_placeholder_text(database_title))
     para_tag.append(text)
 
     # Append the paragraph tag to the soup object
