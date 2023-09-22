@@ -301,7 +301,11 @@ class NotionPage:
                 copy_destination_directory.mkdir(exist_ok=False, parents=True)
 
                 # Create new link tags and update all references in the HTML
-                attachment_link_replacement_html = htmltools.create_link_text(full_link_path, filename)
+                if attachment.is_image:
+                    attachment_link_replacement_html = htmltools.create_image_text(full_link_path)
+                else:
+                    attachment_link_replacement_html = htmltools.create_link_text(full_link_path, filename)
+
                 self.updated_html = self.updated_html.replace(attachment.placeholder_text,
                                                               attachment_link_replacement_html)
 
@@ -382,13 +386,18 @@ class NotionPage:
 class Attachment:
     """File attachment data. Includes images, PDFs, etc."""
 
-    def __init__(self, url, notion_type, placeholder_text, full_path_to_file):
+    def __init__(self, url, block_type, placeholder_text, full_path_to_file):
         self.url = url
-        self.type = notion_type
+        self.block_type = block_type
         self.placeholder_text = placeholder_text
 
         # full_path_to_file is a pathlib.Path object, not a string.
         self.path = full_path_to_file
+
+        if self.block_type == "image":
+            self.is_image = True
+        else:
+            self.is_image = False
 
 
 def startup(token, file_path):

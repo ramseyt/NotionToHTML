@@ -59,6 +59,15 @@ def create_link_text(link_url, link_text):
     return str(link_tag)
 
 
+def create_image_text(image_url):
+    """Creates a image tag with the given URL and text.
+    """
+
+    img_tag = BeautifulSoup(features="html.parser").new_tag("img")
+    img_tag['src'] = image_url
+    return str(img_tag)
+
+
 ########################### Converting Notion page data to html
 
 def convert_page_to_html(notion_page):
