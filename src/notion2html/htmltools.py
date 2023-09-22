@@ -79,7 +79,7 @@ def convert_page_to_html(notion_page):
     except Exception as exc:
         error_message = ("Exception hit while constructing page HTML. Skipping page:\n"
                         f"Page: {notion_page}\n"
-                        f"Exception: {exc}"
+                        f"Exception: {exc}\n"
                         f"Traceback: {traceback.format_exc()}")
         logger.debug(error_message)
         notion_page.add_error(error_message)

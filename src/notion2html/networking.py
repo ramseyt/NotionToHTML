@@ -5,6 +5,7 @@
 # Standard library imports
 import logging
 import threading
+import traceback
 import time
 
 # External module imports
@@ -35,7 +36,7 @@ class Error404NotFound(Exception):
     """Raised when a 404 is returned from a network request."""
 
 
-class Error403NotAuthorized(Exception):
+class Error403RestrictedResource(Exception):
     """Raised when a 403 is returned from a network request."""
 
 
@@ -122,7 +123,7 @@ def get_notion_users():
         returned_data = fetch_all_users()
         logger.debug(f"Users returned from Notion: {returned_data}")
 
-    except Error403NotAuthorized:
+    except Error403RestrictedResource:
         logger.debug("The Notion token used is not authorized to fetch users. User information "
                      "capabilities  are required to access Notion users. See "
                      "https://developers.notion.com/reference/capabilities#user-capabilities for "
@@ -130,7 +131,9 @@ def get_notion_users():
         returned_data = None
 
     except Exception as exc:
-        logger.debug(f"Exception fetching users from Notion. Not a 403. Exception: {str(exc)}")
+        logger.debug(f"Exception fetching users from Notion. Not a 403.\n"
+                     f"Exception: {exc}\n"
+                     f"Traceback: {traceback.format_exc()}")
         returned_data = None
 
     if returned_data is None:
@@ -286,7 +289,7 @@ def get_network_data(url, method, file_download=False, payload=None):
         except Error404NotFound:
             raise
 
-        except Error403NotAuthorized:
+        except Error403RestrictedResource:
             raise
 
         except ValueError:
@@ -302,7 +305,8 @@ def get_network_data(url, method, file_download=False, payload=None):
 
         except Exception as exc:
             logger.debug(("Network request: Exception while fetching data! \n"
-                          f"{str(exc)} \n"
+                          f"Exception: {str(exc)} \n"
+                          f"Traceback: {traceback.format_exc()}"
                           "Retrying..."))
             time.sleep(5)
 
@@ -393,7 +397,7 @@ def _handle_response(response, file_download=False):
                          f"Response headers: {response.headers} \n"
                          f"Response full text: {response.text}")
         logger.debug(error_message)
-        raise Error403NotAuthorized(error_message)
+        raise Error403RestrictedResource(error_message)
 
     if response.ok is False:
         logger.debug(("Got non-200 status code. \n"
