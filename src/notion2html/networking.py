@@ -282,7 +282,7 @@ def get_network_data(url, method, file_download=False, payload=None):
     for i in range(4, 0, -1):
         try:
             response = _execute_request(method, url, headers, payload)
-            data, should_retry = _handle_response(response, file_download)
+            data, should_retry = _handle_response(response, url, file_download)
             if not should_retry:
                 return data
 
@@ -354,7 +354,7 @@ def _execute_request(method, url, headers, payload=None):
     return response
 
 
-def _handle_response(response, file_download=False):
+def _handle_response(response, url, file_download=False):
 
     data = None
     if response is None:
@@ -369,6 +369,7 @@ def _handle_response(response, file_download=False):
 
         except Exception as exc:
             logger.debug(("Exception while parsing JSON! Attempting retry...\n"
+                          f"URL attempted: {url} \n"
                           f"Exception: {str(exc)} \n"
                           f"Traceback: {traceback.format_exc()} \n"
                           "Retrying..."))
