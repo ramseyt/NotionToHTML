@@ -40,11 +40,11 @@ def test_example_client(caplog):
     try:
 
         # The Notion database id for testing.
-        notion_database_id = "ce3f1480e9a0476fb4d814a5dc0b0828" # This is the inbox
+        notion_test_id = os.environ.get("NOTION_TEST_ID")
         token = os.environ.get("NOTION_TOKEN")
 
         # Get the data from Notion
-        notion_data = notion2html.get_from_notion(notion_database_id, token)
+        notion_data = notion2html.get_from_notion(notion_test_id, token)
 
         # Path to the directory where the HTML files will be written
         html_files_directory = logfile_path.parent.joinpath("html")
