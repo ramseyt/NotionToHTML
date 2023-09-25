@@ -74,7 +74,7 @@ def test_integration(caplog):
             # Write out the html to a file
             html_file_full_path = logfile.parent.joinpath(f"{page.id}.html")
             with html_file_full_path.open(mode="w", encoding="utf-8") as html_file:
-                html_file.write(page.html)
+                html_file.write(page.updated_html)
 
     except Exception as exc:
         logger.exception(exc)
