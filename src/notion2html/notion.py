@@ -313,15 +313,6 @@ class NotionPage:
                 shutil.copy(attachment.path, copy_destination_directory)
 
 
-    def copy_all_attachments_to_path(self, directory):
-        """directory: a pathlib.Path object, not a string."""
-
-        logger.debug(f"Copying attachments to directory: {directory}")
-        if self.attachments:
-            for attachment in self.get_attachments():
-                files.copy_file(attachment.path, directory)
-
-
     def add_soup(self, soup):
         self.soup = soup
 
