@@ -20,7 +20,8 @@ This is the primary interface for the library and exposes one method: get_from_n
 ### Methods
 
 ```python
-get_from_notion(content_id, notion_token, file_path=None)```
+get_from_notion(content_id, notion_token, file_path=None)
+```
 
 - **Purpose**: Takes the Notion page or database referenced by the content_id. Recursively downloads all pages in the full page tree consisting of all sub-pages and mentioned pages, and the full contents of all databases encountered.
 - **Parameters**:
