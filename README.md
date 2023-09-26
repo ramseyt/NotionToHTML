@@ -25,8 +25,9 @@ All content and property types are supported, including attachments.
 
 ## Limitations
 
-A flat list of all pages found is returned to the caller. Page hierarchy isn't preserved. I haven't found a 100% reliable way to tell the difference between a true subpage of a given page, and a mention of a page that's not a subpage. Until that happens there's no way for a hierarchy to be exactly right, and it's probably the worst of all cases to be subtly wrong. So instead the library returns a flat list of all pages found.
+A flat list of all pages found is returned to the caller. Page hierarchy isn't preserved. I haven't found a 100% reliable way to tell the difference between a true subpage of a given page, and a mention of a page that's not a subpage. Until that happens there's no way for a hierarchy to be exactly right and I don't want it to be subtly wrong.
 
+Comments aren't downloaded.
 
 ## Installation
 
@@ -42,13 +43,23 @@ Be sure to save your Notion token somewhere safe as you'll need it in step 3.
 
 Be sure that the integration has access to ALL the pages you want to download. A common cause of errors are pages that link to ("mention") other pages that aren't in the page tree that the integration has access to.
 
-### Step 3: Choose the page you want to download and find its page ID
+### Step 3: Give your integration user capabilities if needed
+
+If you:
+
+- Mention users if your pages, or
+- Have database properties that mention users
+
+...and you want to these user mentions to appear in the downloaded HTML as the actual names of these users, you need to give your integration the "Read user information without email addresses" capability. See the [Notion documentation on capabilities](https://developers.notion.com/reference/capabilities) for details on how to do this.
+
+
+### Step 4: Choose the page you want to download and find its page ID
 
 The library will download all pages and databases that are linked to the page you specify. "Linked" means all pages that are either true subpages or pages that are mentioned, and databases includes both full-page and inline/embedded databases.
 
 Once you choose the page you want to download you'll need to find its page ID. See Notion's instructions on how to do that [here](https://developers.notion.com/docs/working-with-page-content#creating-a-page-with-content); click that link and scroll down to "Where can I find my page's ID?"
 
-### Step 4: Run the code
+### Step 5: Run the code
 
 Here's an example of how to use the library to download a tree of pages and save them as HTML files that can be uploaded to a webserver.
 
@@ -59,8 +70,8 @@ This is just one of many possible uses. The returned objects contain more proper
 import notiontohtml
 
 notion_token = foo # This is the access token you got from Notion in step 1
-content_id = bar # This is the page ID you got in step 3
-results = notiontohtml.get_pages(content_id, notion_token)
+content_id = bar # This is the page ID you got in step 4
+results = notiontohtml.get_from_notion(content_id, notion_token)
 ```
 
 ...time passes. Downloading many pages, especially many large pages, can take minutes.
@@ -77,7 +88,11 @@ html_files_directory.mkdir(exist_ok=True, parents=True)
 attachment_files_directory.mkdir(exist_ok=True, parents=True)
 
 # results is a NotionResult object returned by get_pages().
-for page in results:
+for page in results.get_pages():
+
+    # Print out any errors that might have occured while downloading or processing the page.
+    if page.errors:
+        print(f"Error(s) on page: {page.id} -- Error(s): {page.error}")
 
     # Fix up links to other mentioned Notion pages.
     # This is the convenience method that's provided to do this for all pages at
@@ -112,8 +127,12 @@ notiontohtml.get_from_notion(notion_id, notion_token, file_path=None)
 
 ## Reporting Bugs
 
+File a [GitHub issue](https://github.com/ramseyt/NotionToHTML/issues) for any bugs you find. If relevant include the full text of the page error or exception that was raised.
+
 ## Code Structure and Info
 
 ## Contributing
+
+Contributions are welcome, though please file a [GitHub issue](https://github.com/ramseyt/NotionToHTML/issues) first so we can discuss the change you'd like to make.
 
 ## License

@@ -80,7 +80,7 @@ def set_path_to_run_directory(custom_path=None):
 
 
     full_directory_path = pathlib.Path.joinpath(root_path, \
-                                                "logs-notion2html", \
+                                                "notion2html", \
                                                 _get_directory_name_for_run())
     full_directory_path.mkdir(exist_ok=True, parents=True)
 
