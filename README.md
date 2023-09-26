@@ -91,8 +91,8 @@ attachment_files_directory.mkdir(exist_ok=True, parents=True)
 for page in results.get_pages():
 
     # Print out any errors that might have occured while downloading or processing the page.
-    if page.errors:
-        print(f"Error(s) on page: {page.id} -- Error(s): {page.error}")
+    if page.has_errors():
+        print(f"Error(s) on page: {page.id} -- Error(s): {page.get_errors()}")
 
     # Fix up links to other mentioned Notion pages.
     # This is the convenience method that's provided to do this for all pages at

@@ -25,7 +25,8 @@ logger.setLevel(logging.WARNING)
 ########################### Formatting
 
 def page_link_text(page_title, page_id):
-    """The regular expressions in method add_html() on NotionPage MUST be updated if this text is changed."""
+    """The regular expressions in method add_html() on NotionPage MUST be updated
+    if this text is changed."""
     return f"~~~PageMention:::{page_id}:::{page_title}~~~"
 
 
@@ -94,7 +95,8 @@ def convert_page_to_html(notion_page):
     body_tag.append(p_tag)
 
     try:
-        page_soup = flatten_blocks_into_html(notion_page, notion_page.blocks, BeautifulSoup(features="html.parser"))
+        page_soup = flatten_blocks_into_html(notion_page, notion_page.blocks,
+                                             BeautifulSoup(features="html.parser"))
         body_tag.append(page_soup)
     except Exception as exc:
         error_message = ("Exception hit while constructing page HTML. Skipping page:\n"
@@ -168,7 +170,7 @@ def flatten_blocks_into_html(notion_page, blocks, soup):
         handler = handlers.get(block_type)
 
         if handler is None:
-            notion_page.add_error(f"!!!!!!!! Unknown block type! Skipping!!!!!!!: {block_type} -- Raw Block: {block}")
+            notion_page.add_error(f"!!!Unknown block type! Skipping!!!: {block_type} -- Raw Block: {block}")
             continue
 
         # Some block types require additional arguments.
@@ -425,7 +427,8 @@ def _create_list_item_tag(block, soup):
         checkbox["type"] = "checkbox"
 
         # If there's a 'checked' attribute in the block, set it.
-        # NOTE: This is based on assumption. Modify as necessary if the block structure is different.
+        # NOTE: This is based on assumption. Modify as necessary if the block structure is
+        # different.
         logger.debug(f"To Do Block: {block}")
         if block.get(item_type, {}).get('checked', False):
             checkbox["checked"] = "checked"
@@ -469,13 +472,15 @@ def _process_parent_block(block, li_tag, soup, notion_page):
     if parent_block_id:
         parent_block = notion_page.get_block_for_block_id(parent_block_id)
         if parent_block and parent_block['type'] in ['bulleted_list_item', 'numbered_list_item', 'to_do']:
-            # If the parent block is also a list item, we find the parent's "li" tag and append this "li" tag to it
+            # If the parent block is also a list item, we find the parent's
+            # "li" tag and append this "li" tag to it
             parent_li_tag = soup.find('li', {'data-block-id': parent_block_id})
             if parent_li_tag:
                 parent_li_tag.find('ul' if (block['type'] == "bulleted_list_item" or block['type'] == "to_do") \
                                             else 'ol').append(li_tag)
         else:
-            # If the parent block is not a list item, we append this "li" tag directly to the soup object
+            # If the parent block is not a list item, we append this
+            # "li" tag directly to the soup object
             list_tag = soup.new_tag("ul" if (block['type'] == "bulleted_list_item" or block['type'] == "to_do") \
                                     else 'ol')
             list_tag.append(li_tag)

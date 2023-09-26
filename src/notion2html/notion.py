@@ -178,12 +178,12 @@ class NotionPage:
         self.parent_page_id = ""
 
         ##### HTML related
-        self.soup = None
+        self.original_soup = None
         self.original_html = ""
         self.updated_html = ""
 
-        # Dict - key is the page id, value is the placeholder text for the page link.
-        self.page_links = {}
+        # Dict - key is the placeholder text for the page link, value is a NotionPageLink object.
+        self.notion_page_links = {}
 
         ##### Attachments
         # Dict - key is the full attachment URL, value is an Attachment object.
@@ -250,7 +250,12 @@ class NotionPage:
         # Find all page link placeholders
         pattern = r'~~~PageMention:::([A-Za-z0-9-]+):::(.+?)~~~'
         matches = re.finditer(pattern, html)
-        self.page_links = {match.group(1): match.group(0) for match in matches}
+        for match in matches:
+            full_text = match.group(0)
+            page_id = match.group(1)
+            page_title = match.group(2)
+
+            self.notion_page_links[page_id] = NotionPageLink(page_id, page_title, full_text)
 
         self.updated_html = copy.copy(html)
 
@@ -268,9 +273,9 @@ class NotionPage:
         will live in.
         """
 
-        if self.page_links:
+        if self.notion_page_links:
             # Replace all page link placeholders with the correct link.
-            for page_id, placeholder_text in self.page_links.items():
+            for page_id, placeholder_text in self.notion_page_links.items():
 
                 link_path = f"{path}{page_id}.html"
                 link_text = placeholder_text.split(":::")[2].rstrip("~~~")
@@ -279,14 +284,14 @@ class NotionPage:
                 self.updated_html = self.updated_html.replace(placeholder_text, page_link_replacement_html)
 
 
-    def set_attachment_paths_and_copy(self, link_path, directory_path):
+    def set_attachment_paths_and_copy(self, attachment_link_path, directory_path):
 
         if self.attachments:
             for attachment in self.attachments.values():
                 filename = attachment.path.name
                 attachment_directory_name = secrets.token_urlsafe(10)
 
-                full_link_path = f"{link_path}/{attachment_directory_name}/{filename}"
+                full_link_path = f"{attachment_link_path}/{attachment_directory_name}/{filename}"
                 copy_destination_directory = pathlib.Path(directory_path).joinpath(attachment_directory_name)
                 copy_destination_directory.mkdir(exist_ok=False, parents=True)
 
@@ -304,7 +309,7 @@ class NotionPage:
 
 
     def add_soup(self, soup):
-        self.soup = soup
+        self.original_soup = soup
 
 
     def add_attachment(self, attachment):
@@ -356,23 +361,48 @@ class NotionPage:
         self.errors.append(error)
 
 
+    def get_notionlink_for_placeholder_text(self, notionlink_placeholder_text):
+        """Returns a NotionPageLink object for the given placeholder text.
+        """
+
+        return self.notion_page_links[notionlink_placeholder_text]
+
+
+    def get_all_notionlinks(self):
+        """Returns a list of all NotionPageLink objects."""
+
+        return list(self.notion_page_links.values())
+
+
 
 class Attachment:
     """File attachment data. Includes images, PDFs, etc."""
 
     def __init__(self, url, block_type, placeholder_text, full_path_to_file):
         self.url = url
-        self.block_type = block_type
+        self.type = block_type
         self.placeholder_text = placeholder_text
 
         # full_path_to_file is a pathlib.Path object, not a string.
         self.path = full_path_to_file
 
-        if self.block_type == "image":
+        if self.type == "image":
             self.is_image = True
         else:
             self.is_image = False
 
+
+class NotionPageLink:
+    """Represents a link to a Notion page.
+    """
+
+    def __init__(self, page_id, page_title, placeholder_text):
+        self.page_id = page_id
+        self.page_title = page_title
+        self.placeholder_text = placeholder_text
+
+
+########################### Startup and teardown functions
 
 def startup(token, file_path):
     """Setup code for a single run."""
