@@ -41,7 +41,6 @@ class NotionResult:
         self._top_level_page = None
         self._all_pages = {}
         self._all_databases = {}
-        self._errors = {}
 
         # This will be a pathlib.Path object, not a string.
         self._file_path = None
@@ -63,12 +62,11 @@ class NotionResult:
                 self._all_pages[subpage.id] = subpage
 
         # Walk the list of pages and add all databases to the list of all databases.
-        #
-        # TODO: This doesn't work for databases that are embedded in pages of these databases.
-        for page in list(self._all_pages.values()):
-            if page.has_databases():
-                for database in page.get_all_databases():
+        for single_page in list(self._all_pages.values()):
+            if single_page.has_databases():
+                for database in single_page.get_all_databases():
                     self._add_database(database)
+
 
     def _add_database(self, database):
         """database: a NotionDatabase object."""
@@ -89,25 +87,17 @@ class NotionResult:
         return list(self._all_pages.values())
 
 
-    def get_errors(self):
-        return list(self._errors.values())
-
-
     def get_file_path(self):
         return self._file_path
 
 
-    def get_item_for_id(self, item_id):
-        """Returns a NotionPage object or error for the given id.
-        Specifically does not search databases objects because they are
-        not exposed publicly.
+    def get_page_for_id(self, item_id):
+        """Returns a NotionPage object for the given id. Specifically does not search databases
+        objects because they are not exposed publicly.
         """
 
         if item_id in self._all_pages:
             return self._all_pages[item_id]
-
-        if item_id in self._errors:
-            return self._errors[item_id]
 
         raise ValueError(f"Item with id {item_id} not found.")
 
@@ -340,13 +330,6 @@ class NotionPage:
 
 
     def get_all_databases(self):
-
-        # Don't need to get all databases in the database's page tree here; that's
-        # handled elsewhere.
-
-        # for subpage in self.subpages:
-        #     self.databases.extend(subpage.get_all_databases())
-        # return self.databases
 
         return self.databases
 
