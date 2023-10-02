@@ -1,5 +1,7 @@
 # API Reference
 
+The documentation below defines the public interfaces for the library. These will remain stable and backwards-compatible. All other classes, methods, or attributes are considered private are subject to change without notice.
+
 Your code will call the get_from_notion() method to download pages from Notion, like this:
 
 ```python

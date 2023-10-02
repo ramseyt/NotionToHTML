@@ -15,7 +15,7 @@ All content and property types are supported, including attachments.
 - Easy to use. Just pass in the id of a single Notion page or database and ALL pages in the page tree (subpages or mentions) are automatically downloaded.
 - Attachments are fully supported and are downloaded automatically.
 - All content and property types are supported. Formatting is preserved as much as possible. For example:
-    - List items such as bullets are properly indented
+    - List items such as bullets are properly indented.
     - To-do checked/unchecked state is accurately reflected.
     - All files attached to the page as properies are downloaded, not just files attached to the page itself.
 - Database pages are downloaded and processed concurrently, speeding up the download process.
@@ -120,9 +120,9 @@ for page in results.get_pages():
 ```
 
 
-## API Reference
+## Documentation
 
-notiontohtml.get_from_notion(notion_id, notion_token, file_path=None)
+For detailed documentation on all public classes, methods, and attributes see the [API Reference](docs/API_Reference.md).
 
 
 ## Reporting Bugs
@@ -136,3 +136,5 @@ File a [GitHub issue](https://github.com/ramseyt/NotionToHTML/issues) for any bu
 Contributions are welcome, though please file a [GitHub issue](https://github.com/ramseyt/NotionToHTML/issues) first so we can discuss the change you'd like to make.
 
 ## License
+
+[BSD 3-Clause License](LICENSE).
