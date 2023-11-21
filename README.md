@@ -8,8 +8,6 @@ Give it the id to a Notion page and, like for databases, it will automatically f
 
 All content and property types are supported, including attachments.
 
-## Table of Contents
-
 ## Features
 
 - Easy to use. Just pass in the id of a single Notion page or database and ALL pages in the page tree (subpages or mentions) are automatically downloaded.
@@ -29,7 +27,6 @@ A flat list of all pages found is returned to the caller. Page hierarchy isn't p
 
 Comments aren't downloaded.
 
-## Installation
 
 ## Usage
 
@@ -129,7 +126,6 @@ For detailed documentation on all public classes, methods, and attributes see th
 
 File a [GitHub issue](https://github.com/ramseyt/NotionToHTML/issues) for any bugs you find. If relevant include the full text of the page error or exception that was raised.
 
-## Code Structure and Info
 
 ## Contributing
 
